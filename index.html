@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Schwall Foto">
+<title>Schwall Foto-Doku</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  :root{--accent:#f07d00;--ink:#1b232b;--muted:#66727d;--line:#dde1e5;--bg:#f2f3f5;--ok:#2e8b57;--warn:#c0392b}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;
+    font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+  #stage{position:fixed;inset:0;background:#000}
+  #video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+  #ovl{position:absolute;pointer-events:none}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+  #flash.on{opacity:.85;transition:none}
+  .topbar{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;
+    display:flex;gap:8px;align-items:center;background:linear-gradient(#000a,#0000)}
+  .pill{background:#0009;border:1px solid #ffffff33;color:#fff;border-radius:22px;padding:8px 12px;font:inherit;font-size:14px;
+    cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .pill.grow{flex:1;min-width:0;text-align:left}
+  .pill b{color:var(--accent)}
+  .gps{font-size:12px;padding:8px 10px}
+  .gps.ok{background:#2e8b57cc} .gps.bad{background:#c0392bcc}
+  .round{width:42px;height:42px;padding:0;display:grid;place-items:center;font-size:18px;flex:none}
+  .round.on{background:var(--accent);color:#000}
+  .detail{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 118px);display:flex;justify-content:center}
+  .detail .pill{max-width:100%}
+  .bottombar{position:absolute;left:0;right:0;bottom:0;padding:10px 24px calc(env(safe-area-inset-bottom) + 16px);
+    display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#0000,#000a)}
+  #shutter{width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:var(--accent);cursor:pointer;padding:0}
+  #shutter:active{transform:scale(.93)}
+  .thumb{width:54px;height:54px;border-radius:12px;border:2px solid #fff;background:#222 center/cover no-repeat;position:relative;cursor:pointer;padding:0}
+  .thumb i{position:absolute;top:-8px;right:-8px;background:var(--accent);color:#000;font-style:normal;font-weight:700;font-size:12px;
+    min-width:22px;height:22px;border-radius:11px;display:grid;place-items:center;padding:0 5px}
+  .thumb i:empty{display:none}
+  .side{width:54px;display:flex;justify-content:center}
+  .camerr{position:absolute;left:20px;right:20px;top:40%;text-align:center;color:#ddd;display:none}
+  .camerr.on{display:block}
+  .zoom{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 170px);display:none;flex-direction:column;gap:8px}
+  .zoom.on{display:flex}
+  /* Sheets */
+  .sheet{position:fixed;inset:0;background:#000a;z-index:20;display:none;align-items:flex-end;justify-content:center;color:var(--ink)}
+  .sheet.on{display:flex}
+  .box{background:var(--bg);width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;
+    padding:16px 14px calc(16px + env(safe-area-inset-bottom));-webkit-user-select:text;user-select:text}
+  .box h3{margin:2px 0 12px;display:flex;align-items:center;justify-content:space-between}
+  .x{border:0;background:#e2e5e8;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer;color:var(--ink)}
+  .card{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:12px}
+  .lbl{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px}
+  input[type=text],textarea,select{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+  textarea{min-height:60px;resize:vertical}
+  .field{margin-bottom:12px} .field:last-child{margin-bottom:0}
+  .row{display:flex;gap:10px} .row>*{flex:1}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:7px 12px;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;font:inherit;font-weight:700;cursor:pointer;margin-top:8px;text-align:center}
+  .btn.p{background:var(--accent);color:#000} .btn.s{background:var(--ink);color:#fff}
+  .btn.g{background:#e2e5e8;color:var(--ink)} .btn.d{background:#fbe9e7;color:var(--warn)}
+  .plist .it{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .plist .it:last-child{border-bottom:0}
+  .plist .it .n{flex:1;cursor:pointer} .plist .it b{display:block} .plist .it small{color:var(--muted)}
+  .plist .it.on b{color:var(--accent)}
+  .ico{border:0;background:#eef0f2;border-radius:8px;padding:8px 10px;font-size:15px;cursor:pointer}
+  .tog{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .tog:last-child{border-bottom:0}
+  .sw{position:relative;width:46px;height:28px;flex:none}
+  .sw input{opacity:0;width:0;height:0}
+  .sw i{position:absolute;inset:0;background:#cfd5da;border-radius:20px;transition:.2s}
+  .sw i:before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked+i{background:var(--ok)} .sw input:checked+i:before{transform:translateX(18px)}
+  .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .gal div{position:relative}
+  .gal img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;display:block;cursor:pointer}
+  .gal span{position:absolute;left:4px;bottom:4px;font-size:11px;background:#000a;color:#fff;border-radius:6px;padding:1px 6px}
+  .gal span.open{background:var(--accent);color:#000}
+  .empty{color:var(--muted);text-align:center;padding:20px 0;grid-column:1/-1}
+  .hint{font-size:13px;color:var(--muted);margin-top:6px}
+  .logoPrev{height:54px;max-width:100%;object-fit:contain;background:#9aa3ab;border-radius:8px;padding:6px}
+  #big{width:100%;border-radius:10px;display:block;background:#222}
+  .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 70px);transform:translateX(-50%);background:#000c;color:#fff;
+    padding:10px 16px;border-radius:12px;z-index:50;font-size:14px;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="stage">
+  <video id="video" playsinline muted autoplay></video>
+  <canvas id="ovl"></canvas>
+  <div id="flash"></div>
+  <div class="camerr" id="camErr"></div>
+
+  <div class="topbar">
+    <button class="pill grow" id="btnProj">Baustelle wählen</button>
+    <button class="pill gps" id="gpsBadge">GPS …</button>
+    <button class="pill round" id="btnTorch" hidden title="Licht">🔦</button>
+    <button class="pill round" id="btnSet" title="Einstellungen">⚙️</button>
+  </div>
+
+  <div class="zoom" id="zoomBox"></div>
+
+  <div class="detail"><button class="pill" id="btnDetail">＋ Kategorie / Lage / Bemerkung</button></div>
+
+  <div class="bottombar">
+    <div class="side"><button class="thumb" id="btnGal" title="Fotos"><i id="cnt"></i></button></div>
+    <button id="shutter" title="Foto aufnehmen" aria-label="Foto aufnehmen"></button>
+    <div class="side"><label class="pill round" title="System-Kamera (volle Auflösung)">📷<input type="file" id="inCam" accept="image/*" capture="environment" hidden></label></div>
+  </div>
+</div>
+
+<!-- Baustelle wählen -->
+<div class="sheet" id="shPick"><div class="box">
+  <h3>Welche Baustelle?<button class="x" data-close="shPick">✕</button></h3>
+  <div class="card plist" id="pickList"></div>
+  <button class="btn p" id="pickNew">+ Neue Baustelle</button>
+  <button class="btn g" id="pickNone">Ohne Baustelle fotografieren</button>
+</div></div>
+
+<!-- Baustelle bearbeiten -->
+<div class="sheet" id="shEdit"><div class="box">
+  <h3><span id="editTitle">Neue Baustelle</span><button class="x" data-close="shEdit">✕</button></h3>
+  <div class="card">
+    <div class="field"><p class="lbl">Projekt- / Kostenstellen-Nr.</p><input type="text" id="eNr" placeholder="z. B. 25-0815"></div>
+    <div class="field"><p class="lbl">Bezeichnung</p><input type="text" id="eName" placeholder="z. B. Ulm, Rosengasse – Gehweg"></div>
+    <div class="field"><p class="lbl">Auftraggeber (optional)</p><input type="text" id="eAg" placeholder="z. B. Stadt Ulm"></div>
+    <div class="field"><p class="lbl">Ersatz-Adresse, wenn offline</p><input type="text" id="eOrt" placeholder="z. B. 89073 Ulm"></div>
+  </div>
+  <button class="btn p" id="eSave">Speichern</button>
+  <button class="btn d" id="eDel" hidden>Baustelle löschen</button>
+</div></div>
+
+<!-- Details -->
+<div class="sheet" id="shDetail"><div class="box">
+  <h3>Angaben zum Foto<button class="x" data-close="shDetail">✕</button></h3>
+  <div class="card"><p class="lbl">Kategorie</p><div class="chips" id="katChips"></div></div>
+  <div class="card">
+    <div class="field"><p class="lbl">Lage / Bauteil</p><input type="text" id="inLage" list="lageList" placeholder="z. B. Station 0+120, Gehweg rechts"><datalist id="lageList"></datalist></div>
+    <div class="field"><p class="lbl">Bemerkung</p><input type="text" id="inBem" placeholder="z. B. Leitung freigelegt, Tiefe 0,80 m"></div>
+  </div>
+  <button class="btn g" id="dClear">Lage &amp; Bemerkung leeren</button>
+  <button class="btn p" data-close="shDetail">Fertig</button>
+</div></div>
+
+<!-- Fotos -->
+<div class="sheet" id="shGal"><div class="box">
+  <h3>Fotos<button class="x" data-close="shGal">✕</button></h3>
+  <button class="btn p" id="btnSaveAll" hidden></button>
+  <div class="card" style="margin-top:10px"><div class="gal" id="gal"></div></div>
+  <div class="hint" id="galHint"></div>
+</div></div>
+
+<!-- Einzelfoto -->
+<div class="sheet" id="shOne"><div class="box">
+  <h3><span style="font-size:14px;font-weight:600;word-break:break-all" id="oneName"></span><button class="x" data-close="shOne">✕</button></h3>
+  <img id="big" alt="">
+  <button class="btn p" id="oneSave">Auf dem Handy speichern</button>
+  <button class="btn d" id="oneDel">Aus der App löschen</button>
+</div></div>
+
+<!-- Einstellungen -->
+<div class="sheet" id="shSet"><div class="box">
+  <h3>Einstellungen<button class="x" data-close="shSet">✕</button></h3>
+  <div class="card">
+    <p class="lbl">Speichern</p>
+    <div class="field"><select id="sSave">
+      <option value="auto">Sofort speichern (Android)</option>
+      <option value="share">Gesammelt sichern (iPhone)</option>
+    </select></div>
+    <div class="hint" id="saveHint"></div>
+    <div class="tog"><span>Zusätzlich Original ohne Stempel speichern</span><label class="sw"><input type="checkbox" id="sOrig"><i></i></label></div>
+  </div>
+  <div class="card">
+    <p class="lbl">Stempel – Inhalt</p>
+    <div id="fieldToggles"></div>
+  </div>
+  <div class="card">
+    <p class="lbl">Stempel – Format</p>
+    <div class="field"><p class="lbl">Datum</p><select id="sDate">
+      <option value="ymd">2025.10.02 09:34</option><option value="dmy">02.10.2025 09:34</option>
+      <option value="dmy2">02.10.25, 09:34</option><option value="dmys">02.10.2025 09:34:12</option></select></div>
+    <div class="field"><p class="lbl">Koordinaten</p><select id="sCoord">
+      <option value="utm">UTM: 32U 573650 5361346</option><option value="utmne">UTM: N 5361346 E 573650</option>
+      <option value="dec">Dezimal: 48.398120° N, 9.991230° E</option></select></div>
+    <div class="row field">
+      <div><p class="lbl">Schrift</p><select id="sSize"><option value="s">Klein</option><option value="m">Mittel</option><option value="l">Groß</option></select></div>
+      <div><p class="lbl">Position</p><select id="sPos"><option value="bl">Unten links</option><option value="br">Unten rechts</option></select></div>
+    </div>
+    <div class="field"><p class="lbl">Logo-Hintergrund</p><select id="sLogoBg">
+      <option value="glow">Heller Rand (gut auf Asphalt)</option><option value="none">Keiner (wie Vorlage)</option><option value="box">Weißes Feld</option></select></div>
+  </div>
+  <div class="card">
+    <p class="lbl">Firma &amp; Fotograf</p>
+    <div class="field"><input type="text" id="sFirma" placeholder="Firmenname"></div>
+    <div class="field"><input type="text" id="sUser" placeholder="Name des Fotografen"></div>
+    <p class="lbl">Logo</p>
+    <img id="sLogoPrev" class="logoPrev" alt="Logo">
+    <div class="row">
+      <label class="btn g">Eigenes Logo<input type="file" id="sLogo" accept="image/*" hidden></label>
+      <button class="btn g" id="sLogoStd">Standard-Logo</button>
+    </div>
+    <div class="hint">Am besten das Original-Logo als PNG mit transparentem Hintergrund hochladen.</div>
+  </div>
+  <div class="card">
+    <p class="lbl">Listen</p>
+    <div class="field"><div class="hint">Kategorien (eine pro Zeile)</div><textarea id="sKats" rows="6"></textarea></div>
+    <div class="field"><div class="hint">Vorschläge Lage / Bauteil (eine pro Zeile)</div><textarea id="sLagen" rows="5"></textarea></div>
+    <button class="btn s" id="btnLists">Listen speichern</button>
+  </div>
+  <div class="card">
+    <p class="lbl">Baustellen auf andere Handys übertragen</p>
+    <div class="row">
+      <button class="btn g" id="btnExport">Exportieren</button>
+      <label class="btn g">Importieren<input type="file" id="inImport" accept=".json,application/json" hidden></label>
+    </div>
+    <div class="tog"><span>Beim Start nach Baustelle fragen</span><label class="sw"><input type="checkbox" id="sAsk"><i></i></label></div>
+    <div class="tog"><span>Adresse online ermitteln (OpenStreetMap)</span><label class="sw"><input type="checkbox" id="sGeo"><i></i></label></div>
+  </div>
+  <div class="hint" style="text-align:center">Schwall Foto-Doku · Version 2.0.0</div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const STD_LOGO = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDE1IDMyMCIgd2lkdGg9IjIwMzAiIGhlaWdodD0iNjQwIj48cGF0aCBkPSJNMjcwLjY3OTkzMTY0MDYyNSAxNTEuOTkyMTg3NUMzMTEuNTYxMjc5Mjk2ODc1IDE1MS45OTIxODc1IDMzNy4yOTM3MDExNzE4NzUgMTM4LjI5NTg5ODQzNzUgMzQyLjM3NzkyOTY4NzUgMTEzLjQ3NjU2MjVDMzQ2LjYzMjA4MDA3ODEyNSA5Mi42NDE2MDE1NjI1IDMzMy4yNDcwNzAzMTI1IDgwLjc3MTQ4NDM3NSAyOTguNjk1MDY4MzU5Mzc1IDc1LjU0MTk5MjE4NzVMMjg2LjU1NTE3NTc4MTI1IDczLjcxNTgyMDMxMjVDMjcwLjk5MTIxMDkzNzUgNzEuMzkxNjAxNTYyNSAyNjUuODAzMjIyNjU2MjUgNjguMDcxMjg5MDYyNSAyNjcuMDQ4MzM5ODQzNzUgNjIuMTc3NzM0Mzc1QzI2OC4yOTM0NTcwMzEyNSA1NS45NTIxNDg0Mzc1IDI3Ny43MzU1OTU3MDMxMjUgNTEuNTUyNzM0Mzc1IDI4OS44NzU0ODgyODEyNSA1MS41NTI3MzQzNzVDMzAzLjE1NjczODI4MTI1IDUxLjU1MjczNDM3NSAzMTAuMjEyNDAyMzQzNzUgNTYuNTMzMjAzMTI1IDMwOS40ODYwODM5ODQzNzUgNjUuNDk4MDQ2ODc1SDM0OS4xMjIzMTQ0NTMxMjVDMzUzLjQ4MDIyNDYwOTM3NSAzOS41OTk2MDkzNzUgMzMxLjM3OTM5NDUzMTI1IDI0LjMyNjE3MTg3NSAyOTIuNTczMjQyMTg3NSAyNC4zMjYxNzE4NzVDMjU2LjA0OTgwNDY4NzUgMjQuMzI2MTcxODc1IDIyOC40NDk3MDcwMzEyNSAzOS4yNjc1NzgxMjUgMjIzLjc4MDUxNzU3ODEyNSA2MS42Nzk2ODc1QzIxOS43MzM4ODY3MTg3NSA4MS4xMDM1MTU2MjUgMjM0LjI2MDI1MzkwNjI1IDk0Ljc5OTgwNDY4NzUgMjYzLjEwNTQ2ODc1IDk5LjI4MjIyNjU2MjVMMjc4LjA0Njg3NSAxMDEuNjA2NDQ1MzEyNUMyOTQuODU1OTU3MDMxMjUgMTA0LjE3OTY4NzUgMzAwLjk3Nzc4MzIwMzEyNSAxMDcuOTE1MDM5MDYyNSAyOTkuNzMyNjY2MDE1NjI1IDExMy44OTE2MDE1NjI1QzI5OC4zODM3ODkwNjI1IDEyMC4zNjYyMTA5Mzc1IDI4OC4zMTkwOTE3OTY4NzUgMTI0Ljc2NTYyNSAyNzQuNzI2NTYyNSAxMjQuNzY1NjI1QzI1OS4wNTg4Mzc4OTA2MjUgMTI0Ljc2NTYyNSAyNTAuNDQ2Nzc3MzQzNzUgMTE4Ljg3MjA3MDMxMjUgMjUxLjg5OTQxNDA2MjUgMTA4LjgyODEyNUgyMTEuMTIxODI2MTcxODc1QzIwNS41MTg3OTg4MjgxMjUgMTM1Ljk3MTY3OTY4NzUgMjI2Ljc4OTU1MDc4MTI1IDE1MS45OTIxODc1IDI3MC42Nzk5MzE2NDA2MjUgMTUxLjk5MjE4NzVaTTQwMC41MDE0NjQ4NDM3NSAxNTEuOTkyMTg3NUM0MzIuNDU5NDcyNjU2MjUgMTUxLjk5MjE4NzUgNDU3LjY3MzA5NTcwMzEyNSAxMzYuNzE4NzUgNDYyLjQ0NjA0NDkyMTg3NSAxMTMuMzEwNTQ2ODc1SDQyMi44MDk4MTQ0NTMxMjVDNDIwLjgzODM3ODkwNjI1IDEyMC4zNjYyMTA5Mzc1IDQxMi4yMjYzMTgzNTkzNzUgMTI2LjI1OTc2NTYyNSA0MDIuMzY5MTQwNjI1IDEyNi4yNTk3NjU2MjVDMzk0LjM3OTYzODY3MTg3NSAxMjYuMjU5NzY1NjI1IDM5MC4yMjkyNDgwNDY4NzUgMTIyLjEwOTM3NSAzOTAuMjI5MjQ4MDQ2ODc1IDExNC4zMDY2NDA2MjVDMzkwLjIyOTI0ODA0Njg3NSAxMDEuNjA2NDQ1MzEyNSAzOTguNzM3NTQ4ODI4MTI1IDg2LjA4Mzk4NDM3NSA0MTUuMDI3ODMyMDMxMjUgODYuMDgzOTg0Mzc1QzQyNC4yNjI0NTExNzE4NzUgODYuMDgzOTg0Mzc1IDQyNi41NDUxNjYwMTU2MjUgOTIuMjI2NTYyNSA0MjUuODE4ODQ3NjU2MjUgOTguNzAxMTcxODc1SDQ2NS40NTUwNzgxMjVDNDY5LjI5NDE4OTQ1MzEyNSA3NS4yOTI5Njg3NSA0NDYuMDUyMDAxOTUzMTI1IDYwLjM1MTU2MjUgNDE1LjIzNTM1MTU2MjUgNjAuMzUxNTYyNUMzNzQuNzY5MDQyOTY4NzUgNjAuMzUxNTYyNSAzNDguNzI1MzQxNzk2ODc1IDg0LjY3Mjg1MTU2MjUgMzQ4LjcyNTM0MTc5Njg3NSAxMTMuNDc2NTYyNUMzNDguNzI1MzQxNzk2ODc1IDEzNi44MDE3NTc4MTI1IDM2OC40Mzk2OTcyNjU2MjUgMTUxLjk5MjE4NzUgNDAwLjUwMTQ2NDg0Mzc1IDE1MS45OTIxODc1Wk01MTMuNDEwMTU2MjUgMTAzLjUxNTYyNUM1MTUuNDg1MzUxNTYyNSA5My4zODg2NzE4NzUgNTIyLjAyMjIxNjc5Njg3NSA4OC40MDgyMDMxMjUgNTMxLjc3NTYzNDc2NTYyNSA4OC40MDgyMDMxMjVDNTQxLjUyOTA1MjczNDM3NSA4OC40MDgyMDMxMjUgNTQ1Ljg4Njk2Mjg5MDYyNSA5My4zODg2NzE4NzUgNTQ0LjEyMzA0Njg3NSAxMDIuMTg3NUw1MzQuMjY1ODY5MTQwNjI1IDE1MC4wSDU3NS43Njk3NzUzOTA2MjVMNTg3LjE4MzM0OTYwOTM3NSA5NC43MTY3OTY4NzVDNTkxLjU0MTI1OTc2NTYyNSA3My42MzI4MTI1IDU4MC4xMjc2ODU1NDY4NzUgNjAuMzUxNTYyNSA1NTUuNzQ0MTQwNjI1IDYwLjM1MTU2MjVDNTM5LjE0MjU3ODEyNSA2MC4zNTE1NjI1IDUyNy44MzI3NjM2NzE4NzUgNjYuNDExMTMyODEyNSA1MTkuMTE2OTQzMzU5Mzc1IDc1Ljg3NDAyMzQzNzVMNTI5LjM4OTE2MDE1NjI1IDI2LjMxODM1OTM3NUg0ODcuODg1MjUzOTA2MjVMNDYyLjI1NjU5MTc5Njg3NSAxNTAuMEg1MDMuNzYwNDk4MDQ2ODc1Wk02MTEuNzkyNDgwNDY4NzUgMTUwLjBINjU0LjU0MTUwMzkwNjI1TDY3Mi4xODA2NjQwNjI1IDExOS40NTMxMjVDNjc1LjM5NzIxNjc5Njg3NSAxMTMuOTc0NjA5Mzc1IDY3OC40MDYyNSAxMDguMTY0MDYyNSA2ODEuNTE5MDQyOTY4NzUgMTAyLjI3MDUwNzgxMjVDNjgyLjAzNzg0MTc5Njg3NSAxMDguMTY0MDYyNSA2ODIuNjYwNDAwMzkwNjI1IDExMy45NzQ2MDkzNzUgNjgzLjU5NDIzODI4MTI1IDExOS40NTMxMjVMNjg4LjU3NDcwNzAzMTI1IDE1MC4wSDczMS4zMjM3MzA0Njg3NUw3ODMuMDk5ODUzNTE1NjI1IDYyLjM0Mzc1SDczOC42OTA2NzM4MjgxMjVMNzI3LjI3NzA5OTYwOTM3NSA4Ni4yNUM3MjIuNTA0MTUwMzkwNjI1IDk2LjI5Mzk0NTMxMjUgNzE3LjgzNDk2MDkzNzUgMTA3LjE2Nzk2ODc1IDcxMy4xNjU3NzE0ODQzNzUgMTE3Ljg3NTk3NjU2MjVDNzEyLjMzNTY5MzM1OTM3NSAxMDcuMTY3OTY4NzUgNzExLjUwNTYxNTIzNDM3NSA5Ni4yOTM5NDUzMTI1IDcxMC4zNjQyNTc4MTI1IDg2LjI1TDcwNy43NzAyNjM2NzE4NzUgNjIuMzQzNzVINjcxLjY2MTg2NTIzNDM3NUw2NTkuMTA2OTMzNTkzNzUgODYuMjVDNjUzLjkxODk0NTMxMjUgOTYuMjEwOTM3NSA2NDguNjI3MTk3MjY1NjI1IDEwNy4wODQ5NjA5Mzc1IDY0My4zMzU0NDkyMTg3NSAxMTcuNzkyOTY4NzVDNjQyLjkyMDQxMDE1NjI1IDEwNy4wODQ5NjA5Mzc1IDY0Mi42MDkxMzA4NTkzNzUgOTYuMjEwOTM3NSA2NDEuNzc5MDUyNzM0Mzc1IDg2LjI1TDYzOS45MTEzNzY5NTMxMjUgNjIuMzQzNzVINTk2LjMzMjI3NTM5MDYyNVpNODEwLjA5NTQ1ODk4NDM3NSAxNTEuOTkyMTg3NUM4MjQuNjIxODI2MTcxODc1IDE1MS45OTIxODc1IDgzNi41NTQxOTkyMTg3NSAxNDYuNjc5Njg3NSA4NDMuNTA2MTAzNTE1NjI1IDEzNy4wNTA3ODEyNUg4NDMuOTIxMTQyNTc4MTI1TDg0MS4yMjMzODg2NzE4NzUgMTUwLjBIODgxLjY4OTY5NzI2NTYyNUw4OTkuODQ3NjU2MjUgNjIuMzQzNzVIODU5LjM4MTM0NzY1NjI1TDg1Ny4wOTg2MzI4MTI1IDczLjMwMDc4MTI1SDg1Ni41Nzk4MzM5ODQzNzVDODUxLjkxMDY0NDUzMTI1IDY0Ljc1MDk3NjU2MjUgODQyLjg4MzU0NDkyMTg3NSA2MC4zNTE1NjI1IDgyOC42Njg0NTcwMzEyNSA2MC4zNTE1NjI1QzgwMS4xNzIxMTkxNDA2MjUgNjAuMzUxNTYyNSA3NzcuOTI5OTMxNjQwNjI1IDc5LjE5NDMzNTkzNzUgNzcyLjMyNjkwNDI5Njg3NSAxMDYuMDA1ODU5Mzc1Qzc2Ni41MTYzNTc0MjE4NzUgMTMzLjg5NjQ4NDM3NSA3ODEuMzU0MDAzOTA2MjUgMTUxLjk5MjE4NzUgODEwLjA5NTQ1ODk4NDM3NSAxNTEuOTkyMTg3NVpNODI3LjgzODM3ODkwNjI1IDEyNS45Mjc3MzQzNzVDODE2LjUyODU2NDQ1MzEyNSAxMjUuOTI3NzM0Mzc1IDgxMS43NTU2MTUyMzQzNzUgMTE4LjEyNSA4MTQuMjQ1ODQ5NjA5Mzc1IDEwNi4wMDU4NTkzNzVDODE2LjczNjA4Mzk4NDM3NSA5My45Njk3MjY1NjI1IDgyNC43MjU1ODU5Mzc1IDg2LjI1IDgzNi4wMzU0MDAzOTA2MjUgODYuMjVDODQ3LjM0NTIxNDg0Mzc1IDg2LjI1IDg1My44ODIwODAwNzgxMjUgOTMuOTY5NzI2NTYyNSA4NTEuMzkxODQ1NzAzMTI1IDEwNi4wMDU4NTkzNzVDODQ4LjkwMTYxMTMyODEyNSAxMTguMTI1IDgzOS4xNDgxOTMzNTkzNzUgMTI1LjkyNzczNDM3NSA4MjcuODM4Mzc4OTA2MjUgMTI1LjkyNzczNDM3NVpNOTYwLjc3MjcwNTA3ODEyNSAyNi4zMTgzNTkzNzVIOTE5LjI2ODc5ODgyODEyNUw4OTMuNjQwMTM2NzE4NzUgMTUwLjBIOTM1LjE0NDA0Mjk2ODc1Wk0xMDE0LjIyNzA1MDc4MTI1IDI2LjMxODM1OTM3NUg5NzIuNzIzMTQ0NTMxMjVMOTQ3LjA5NDQ4MjQyMTg3NSAxNTAuMEg5ODguNTk4Mzg4NjcxODc1WiIgZmlsbD0iIzFkMWQxYiIvPjxyZWN0IHg9IjAiIHk9IjIwMCIgd2lkdGg9IjMzMCIgaGVpZ2h0PSIyMCIgZmlsbD0iI2YwN2QwMCIvPjxwYXRoIGQ9Ik0yMDYuOTM2NDA2MjUgMzAwLjBIMjIyLjU2MjEyODkwNjI1QzIzMS44MTM4NDc2NTYyNSAzMDAuMCAyMzYuNjU0ODYzMjgxMjUgMjk1LjY3NTc4MTI1IDIzNy42MjMwNjY0MDYyNSAyODkuNzQzMTY0MDYyNUMyMzguNjQ1MDU4NTkzNzUgMjgzLjU3MzI0MjE4NzUgMjM0Ljg3OTgyNDIxODc1IDI3OS45MzQ1NzAzMTI1IDIzMC44OTk0MzM1OTM3NSAyNzkuNzIzNjMyODEyNVYyNzkuNDMzNTkzNzVDMjM0Ljg3OTgyNDIxODc1IDI3OC40ODQzNzUgMjM4LjQyOTkwMjM0Mzc1IDI3Ni4wMDU4NTkzNzUgMjM5LjE4Mjk0OTIxODc1IDI3MS4zMTI1QzI0MC4xNTExNTIzNDM3NSAyNjUuNDA2MjUgMjM2LjY4MTc1NzgxMjUgMjYwLjcxMjg5MDYyNSAyMjguMTU2MTkxNDA2MjUgMjYwLjcxMjg5MDYyNUgyMTMuNTc5MzU1NDY4NzVaTTIxMy45NTU4Nzg5MDYyNSAyOTQuODU4Mzk4NDM3NSAyMTYuMDgwNTQ2ODc1IDI4Mi4zNjAzNTE1NjI1SDIyNS4xNDQwMDM5MDYyNUMyMjkuNzY5ODYzMjgxMjUgMjgyLjM2MDM1MTU2MjUgMjMyLjI5Nzk0OTIxODc1IDI4NS4wNDk4MDQ2ODc1IDIzMS43MDYyNjk1MzEyNSAyODguNjg4NDc2NTYyNUMyMzEuMTY4Mzc4OTA2MjQ5OTggMjkyLjExNjIxMDkzNzUgMjI4LjI5MDY2NDA2MjUgMjk0Ljg1ODM5ODQzNzUgMjIyLjQyNzY1NjI0OTk5OTk4IDI5NC44NTgzOTg0Mzc1Wk0yMTYuODYwNDg4MjgxMjUgMjc3LjcxOTcyNjU2MjUgMjE4Ljg3NzU3ODEyNSAyNjUuODI4MTI1SDIyNy4yNDE3NzczNDM3NUMyMzIuMDI5MDAzOTA2MjUgMjY1LjgyODEyNSAyMzMuNjY5NTcwMzEyNSAyNjguMTIyMDcwMzEyNSAyMzMuMTU4NTc0MjE4NzUgMjcxLjE4MDY2NDA2MjVDMjMyLjQ4NjIxMDkzNzUgMjc1LjEzNTc0MjE4NzUgMjI4LjcyMDk3NjU2MjUgMjc3LjcxOTcyNjU2MjUgMjI0Ljc0MDU4NTkzNzUgMjc3LjcxOTcyNjU2MjVaTTI0MC4wNDM1NzQyMTg3NSAzMDAuMEgyNDYuOTI4NTc0MjE4NzVMMjUyLjI4MDU4NTkzNzQ5OTk4IDI4OS42Mzc2OTUzMTI1SDI2OC4wNDA3ODEyNUwyNjkuOTc3MTg3NSAzMDAuMEgyNzYuMzUxMTkxNDA2MjVMMjY4LjQ3MTA5Mzc0OTk5OTk3IDI2MC43MTI4OTA2MjVIMjYwLjk0MDYyNVpNMjU0Ljg2MjQ2MDkzNzQ5OTk3IDI4NC42Mjc5Mjk2ODc1IDI1OC4yMjQyNzczNDM3NSAyNzguMTQxNjAxNTYyNUMyNTkuNzg0MTYwMTU2MjUgMjc1LjAwMzkwNjI1IDI2MS43MjA1NjY0MDYyNSAyNzAuODM3ODkwNjI1IDI2NC4xMTQxNzk2ODc1IDI2NS40MzI2MTcxODc1QzI2NC43ODY1NDI5Njg3NSAyNzEuMDQ4ODI4MTI1IDI2NS4zNzgyMjI2NTYyNSAyNzUuMjkzOTQ1MzEyNSAyNjUuODYyMzI0MjE4NzQ5OTYgMjc4LjE0MTYwMTU2MjVMMjY3LjA5OTQ3MjY1NjI1IDI4NC42Mjc5Mjk2ODc1Wk0yOTguMzUwOTE3OTY4NzUgMzAwLjYwNjQ0NTMxMjVDMzA3Ljc5MDg5ODQzNzUgMzAwLjYwNjQ0NTMxMjUgMzE0LjkxNzk0OTIxODc1IDI5NC45OTAyMzQzNzUgMzE2LjMxNjQ2NDg0Mzc1IDI4Ni42ODQ1NzAzMTI1TDMyMC42NzMzNzg5MDYyNSAyNjAuNzEyODkwNjI1SDMxNC41NDE0MjU3ODEyNUwzMTAuMjkyMDg5ODQzNzUgMjg1Ljc4ODA4NTkzNzVDMzA5LjM3NzY3NTc4MTI1IDI5MS4xNjY5OTIxODc1IDMwNC43NTE4MTY0MDYyNSAyOTUuMTQ4NDM3NSAyOTguNTkyOTY4NzUgMjk1LjE0ODQzNzVDMjkyLjgxMDY0NDUzMTI1IDI5NS4xNDg0Mzc1IDI4OS43NDQ2Njc5Njg3NSAyOTEuNTYyNSAyOTAuNjU5MDgyMDMxMjUgMjg2LjIwOTk2MDkzNzVMMjk0LjkzNTMxMjUgMjYwLjcxMjg5MDYyNUgyODguODAzMzU5Mzc1TDI4NC40NzMzMzk4NDM3NSAyODYuMjg5MDYyNUMyODMuMDc0ODI0MjE4NzUgMjk0LjU0MTk5MjE4NzUgMjg4LjUzNDQxNDA2MjUgMzAwLjYwNjQ0NTMxMjUgMjk4LjM1MDkxNzk2ODc1IDMwMC42MDY0NDUzMTI1Wk0zMzkuMDk2MTMyODEyNSAzMDAuNjA2NDQ1MzEyNUMzNDguNTM2MTEzMjgxMjUgMzAwLjYwNjQ0NTMxMjUgMzU1LjY2MzE2NDA2MjQ5OTk2IDI5NC45OTAyMzQzNzUgMzU3LjA2MTY3OTY4NzUgMjg2LjY4NDU3MDMxMjVMMzYxLjQxODU5Mzc0OTk5OTk2IDI2MC43MTI4OTA2MjVIMzU1LjI4NjY0MDYyNDk5OTk2TDM1MS4wMzczMDQ2ODc0OTk5NSAyODUuNzg4MDg1OTM3NUMzNTAuMTIyODkwNjI0OTk5OTcgMjkxLjE2Njk5MjE4NzUgMzQ1LjQ5NzAzMTI0OTk5OTk2IDI5NS4xNDg0Mzc1IDMzOS4zMzgxODM1OTM3NSAyOTUuMTQ4NDM3NUMzMzMuNTU1ODU5Mzc0OTk5OTUgMjk1LjE0ODQzNzUgMzMwLjQ4OTg4MjgxMjQ5OTk2IDI5MS41NjI1IDMzMS40MDQyOTY4NzUgMjg2LjIwOTk2MDkzNzVMMzM1LjY4MDUyNzM0Mzc1IDI2MC43MTI4OTA2MjVIMzI5LjU0ODU3NDIxODc1TDMyNS4yMTg1NTQ2ODc1IDI4Ni4yODkwNjI1QzMyMy44MjAwMzkwNjI1IDI5NC41NDE5OTIxODc1IDMyOS4yNzk2Mjg5MDYyNDk5NyAzMDAuNjA2NDQ1MzEyNSAzMzkuMDk2MTMyODEyNSAzMDAuNjA2NDQ1MzEyNVpNMzYzLjY1MDgzOTg0Mzc0OTk2IDMwMC4wSDM2OS44NjM0NzY1NjI0OTk5NUwzNzMuMzg2NjYwMTU2MjQ5OTUgMjc5LjAzODA4NTkzNzVDMzczLjczNjI4OTA2MjQ5OTk2IDI3Ni45NTUwNzgxMjUgMzc0LjE5MzQ5NjA5Mzc0OTk2IDI3My4wNzkxMDE1NjI1IDM3NC44Mzg5NjQ4NDM3NSAyNjcuNzAwMTk1MzEyNUMzNzYuOTkwNTI3MzQzNzQ5OTMgMjczLjM0Mjc3MzQzNzUgMzc4LjA5MzIwMzEyNDk5OTk1IDI3Ni4xMzc2OTUzMTI1IDM3OS40OTE3MTg3NDk5OTk5NiAyNzkuMDkwODIwMzEyNUwzODkuNDY5NTg5ODQzNzUgMzAwLjBIMzk2LjQzNTI3MzQzNzVMNDAzLjA3ODIyMjY1NjI1IDI2MC43MTI4OTA2MjVIMzk2Ljg2NTU4NTkzNzVMMzkzLjEwMDM1MTU2MjQ5OTk1IDI4My4wNzIyNjU2MjVDMzkyLjY5NjkzMzU5Mzc1IDI4NS40NzE2Nzk2ODc1IDM5Mi4xNTkwNDI5Njg3NSAyODkuMjQyMTg3NSAzOTEuODA5NDE0MDYyNDk5OTcgMjkzLjE0NDUzMTI1QzM5MC41NzIyNjU2MjQ5OTk5NCAyODkuMDMxMjUgMzg5LjE3Mzc1IDI4NS44NjcxODc1IDM4OC4zNjY5MTQwNjI1IDI4NC4xMDA1ODU5Mzc1TDM3Ny4yMzI1NzgxMjUgMjYwLjcxMjg5MDYyNUgzNzAuMjkzNzg5MDYyNDk5OTdaTTQwOS4xMDI1OTc2NTYyNSAyNjUuODgwODU5Mzc1SDQyMS42MDg1NTQ2ODc1TDQxNS44NTMxMjUgMzAwLjBINDIxLjk4NTA3ODEyNUw0MjcuNzY3NDAyMzQzNzQ5OTUgMjY1Ljg4MDg1OTM3NUg0NDAuMjE5NTcwMzEyNDk5OTdMNDQxLjA4MDE5NTMxMjUgMjYwLjcxMjg5MDYyNUg0MDkuOTkwMTE3MTg3NVpNNDQxLjMyMjI0NjA5Mzc1IDMwMC4wSDQ2Ni43MTA2ODM1OTM3NUw0NjcuNTcxMzA4NTkzNzQ5OTYgMjk0LjgzMjAzMTI1SDQ0OC4zMTQ4MjQyMTg3NUw0NTAuMzU4ODA4NTkzNzUgMjgyLjcwMzEyNUg0NjguMTA5MTk5MjE4NzQ5OTVMNDY4Ljk5NjcxODc0OTk5OTk2IDI3Ny41ODc4OTA2MjVINDUxLjI3MzIyMjY1NjI0OTk3TDQ1My4yMzY1MjM0Mzc0OTk5NSAyNjUuODgwODU5Mzc1SDQ3Mi4zMDQ3NDYwOTM3NUw0NzMuMTkyMjY1NjI1IDI2MC43MTI4OTA2MjVINDQ3Ljk2NTE5NTMxMjVaTTQ3NC42NzE0NjQ4NDM3NDk5NiAzMDAuMEg0ODAuODAzNDE3OTY4NzQ5OTVMNDgzLjMzMTUwMzkwNjI0OTk2IDI4NS4xNTUyNzM0Mzc1SDQ5MS40ODA1NDY4NzQ5OTk5NkM0OTEuNjE1MDE5NTMxMjQ5OTcgMjg1LjE1NTI3MzQzNzUgNDkxLjcyMjU5NzY1NjI0OTk1IDI4NS4xNTUyNzM0Mzc1IDQ5MS44NTcwNzAzMTI0OTk5NiAyODUuMTU1MjczNDM3NUw0OTcuNDUxMTMyODEyNDk5OTYgMzAwLjBINTA0LjQxNjgxNjQwNjI0OTk1TDQ5OC4yNTc5Njg3NSAyODQuMTI2OTUzMTI1QzUwMy40NzU1MDc4MTI0OTk5IDI4Mi4zMDc2MTcxODc1IDUwNi41NjgzNzg5MDYyNDk5NiAyNzguMjk5ODA0Njg3NSA1MDcuNDU1ODk4NDM3NDk5OTcgMjczLjA1MjczNDM3NUM1MDguNjkzMDQ2ODc0OTk5OTQgMjY1Ljg1NDQ5MjE4NzUgNTA1LjAwODQ5NjA5Mzc0OTk1IDI2MC43MTI4OTA2MjUgNDk1LjY3NjA5Mzc0OTk5OTk1IDI2MC43MTI4OTA2MjVINDgxLjMxNDQxNDA2MjQ5OTk2Wk00ODQuMTkyMTI4OTA2MjQ5OTMgMjgwLjAxMzY3MTg3NSA0ODYuNTg1NzQyMTg3NDk5OTMgMjY1Ljg1NDQ5MjE4NzVINDk0LjA4OTMxNjQwNjI0OTk2QzQ5OS44NDQ3NDYwOTM3NDk5NiAyNjUuODU0NDkyMTg3NSA1MDIuMDUwMDk3NjU2MjQ5OTMgMjY4LjQ2NDg0Mzc1IDUwMS4yNzAxNTYyNDk5OTk5NiAyNzMuMDUyNzM0Mzc1QzUwMC41MTcxMDkzNzQ5OTk5NiAyNzcuNDAzMzIwMzEyNSA0OTcuNjkzMTgzNTkzNzQ5OTUgMjgwLjAxMzY3MTg3NSA0OTEuNzQ5NDkyMTg3NSAyODAuMDEzNjcxODc1Wk01MTAuMzYwNTA3ODEyNSAzMDAuMEg1MTYuNTczMTQ0NTMxMjVMNTIwLjA5NjMyODEyNSAyNzkuMDM4MDg1OTM3NUM1MjAuNDQ1OTU3MDMxMjQ5OSAyNzYuOTU1MDc4MTI1IDUyMC45MDMxNjQwNjI1IDI3My4wNzkxMDE1NjI1IDUyMS41NDg2MzI4MTI0OTk5IDI2Ny43MDAxOTUzMTI1QzUyMy43MDAxOTUzMTI1IDI3My4zNDI3NzM0Mzc1IDUyNC44MDI4NzEwOTM3NSAyNzYuMTM3Njk1MzEyNSA1MjYuMjAxMzg2NzE4NzUgMjc5LjA5MDgyMDMxMjVMNTM2LjE3OTI1NzgxMjQ5OTkgMzAwLjBINTQzLjE0NDk0MTQwNjI0OTlMNTQ5Ljc4Nzg5MDYyNDk5OTkgMjYwLjcxMjg5MDYyNUg1NDMuNTc1MjUzOTA2MjQ5OUw1MzkuODEwMDE5NTMxMjUgMjgzLjA3MjI2NTYyNUM1MzkuNDA2NjAxNTYyNSAyODUuNDcxNjc5Njg3NSA1MzguODY4NzEwOTM3NDk5OSAyODkuMjQyMTg3NSA1MzguNTE5MDgyMDMxMjQ5OSAyOTMuMTQ0NTMxMjVDNTM3LjI4MTkzMzU5Mzc1IDI4OS4wMzEyNSA1MzUuODgzNDE3OTY4NzUgMjg1Ljg2NzE4NzUgNTM1LjA3NjU4MjAzMTI0OTkgMjg0LjEwMDU4NTkzNzVMNTIzLjk0MjI0NjA5Mzc1IDI2MC43MTI4OTA2MjVINTE3LjAwMzQ1NzAzMTI0OTlaTTU1Mi4wMjAxMzY3MTg3NSAzMDAuMEg1NzcuNDA4NTc0MjE4NzVMNTc4LjI2OTE5OTIxODc1IDI5NC44MzIwMzEyNUg1NTkuMDEyNzE0ODQzNzVMNTYxLjA1NjY5OTIxODc0OTkgMjgyLjcwMzEyNUg1NzguODA3MDg5ODQzNzVMNTc5LjY5NDYwOTM3NSAyNzcuNTg3ODkwNjI1SDU2MS45NzExMTMyODEyNUw1NjMuOTM0NDE0MDYyNSAyNjUuODgwODU5Mzc1SDU4My4wMDI2MzY3MTg3NUw1ODMuODkwMTU2MjUgMjYwLjcxMjg5MDYyNUg1NTguNjYzMDg1OTM3NVpNNTg1LjM2OTM1NTQ2ODc1IDMwMC4wSDU5MS41MDEzMDg1OTM3NUw1OTQuNDU5NzA3MDMxMjUgMjgyLjQ5MjE4NzVINjE0LjMzNDc2NTYyNDk5OTlMNjExLjM0OTQ3MjY1NjI1IDMwMC4wSDYxNy41MDgzMjAzMTI1TDYyNC4xNTEyNjk1MzEyNDk5IDI2MC43MTI4OTA2MjVINjE3Ljk5MjQyMTg3NUw2MTUuMTY4NDk2MDkzNzQ5OSAyNzcuMzI0MjE4NzVINTk1LjM0NzIyNjU2MjQ5OTlMNTk4LjE0NDI1NzgxMjUgMjYwLjcxMjg5MDYyNUg1OTIuMDEyMzA0Njg3NVpNNjI2LjM4MzUxNTYyNSAzMDAuMEg2MzIuMzU0MTAxNTYyNUw2MzUuOTA0MTc5Njg3NSAyNzguODUzNTE1NjI1QzYzNi4zODgyODEyNSAyNzUuOTAwMzkwNjI1IDYzNy4xMTQ0MzM1OTM3NDk5IDI3MC45Njk3MjY1NjI1IDYzNy43MzMwMDc4MTI1IDI2Ni43NTA5NzY1NjI1QzYzOC40NTkxNjAxNTYyNDk5IDI3MS42Mjg5MDYyNSA2MzkuMjEyMjA3MDMxMjQ5OSAyNzYuNTMzMjAzMTI1IDYzOS42OTYzMDg1OTM3NSAyNzguODUzNTE1NjI1TDY0NC40NTY2NDA2MjUgMzAwLjBINjQ5LjcwMTA3NDIxODc0OTlMNjYxLjQ1Mzk4NDM3NSAyNzguODUzNTE1NjI1QzY2Mi43OTg3MTA5Mzc1IDI3Ni40Mjc3MzQzNzUgNjY1LjMyNjc5Njg3NSAyNzEuMzY1MjM0Mzc1IDY2Ny41NTkwNDI5Njg3NSAyNjYuNTY2NDA2MjVDNjY2Ljc3OTEwMTU2MjQ5OTkgMjcwLjY3OTY4NzUgNjY1Ljc1NzEwOTM3NSAyNzUuNzY4NTU0Njg3NSA2NjUuMjQ2MTEzMjgxMjUgMjc4Ljg1MzUxNTYyNUw2NjEuNjk2MDM1MTU2MjUgMzAwLjBINjY3LjgwMTA5Mzc1TDY3NC40NDQwNDI5Njg3NSAyNjAuNzEyODkwNjI1SDY2NS4zNTM2OTE0MDYyNDk5TDY1Mi45MDE1MjM0Mzc0OTk5IDI4My4yNTY4MzU5Mzc1QzY1MS43NzE5NTMxMjUgMjg1LjM2NjIxMDkzNzUgNjQ5LjgzNTU0Njg3NSAyODkuNzE2Nzk2ODc1IDY0OC4yNzU2NjQwNjI0OTk5IDI5My4zMDI3MzQzNzVDNjQ3LjkyNjAzNTE1NjI1IDI4OS43OTU4OTg0Mzc1IDY0Ny40MTUwMzkwNjI1IDI4NS4zOTI1NzgxMjUgNjQ2Ljk4NDcyNjU2MjUgMjgzLjI1NjgzNTkzNzVMNjQyLjA2MzAyNzM0Mzc0OTkgMjYwLjcxMjg5MDYyNUg2MzMuMDI2NDY0ODQzNzVaTTY5Mi44Mzk5MDIzNDM3NDk5IDMwMC42MDY0NDUzMTI1QzcwMi4yNzk4ODI4MTI1IDMwMC42MDY0NDUzMTI1IDcwOS40MDY5MzM1OTM3NSAyOTQuOTkwMjM0Mzc1IDcxMC44MDU0NDkyMTg3NSAyODYuNjg0NTcwMzEyNUw3MTUuMTYyMzYzMjgxMjUgMjYwLjcxMjg5MDYyNUg3MDkuMDMwNDEwMTU2MjVMNzA0Ljc4MTA3NDIxODc1IDI4NS43ODgwODU5Mzc1QzcwMy44NjY2NjAxNTYyNSAyOTEuMTY2OTkyMTg3NSA2OTkuMjQwODAwNzgxMjUgMjk1LjE0ODQzNzUgNjkzLjA4MTk1MzEyNDk5OTkgMjk1LjE0ODQzNzVDNjg3LjI5OTYyODkwNjI1IDI5NS4xNDg0Mzc1IDY4NC4yMzM2NTIzNDM3NSAyOTEuNTYyNSA2ODUuMTQ4MDY2NDA2MjUgMjg2LjIwOTk2MDkzNzVMNjg5LjQyNDI5Njg3NSAyNjAuNzEyODkwNjI1SDY4My4yOTIzNDM3NUw2NzguOTYyMzI0MjE4NzQ5OSAyODYuMjg5MDYyNUM2NzcuNTYzODA4NTkzNzUgMjk0LjU0MTk5MjE4NzUgNjgzLjAyMzM5ODQzNzUgMzAwLjYwNjQ0NTMxMjUgNjkyLjgzOTkwMjM0Mzc0OTkgMzAwLjYwNjQ0NTMxMjVaTTcxNy4zOTQ2MDkzNzUgMzAwLjBINzIzLjYwNzI0NjA5Mzc1TDcyNy4xMzA0Mjk2ODc0OTk5IDI3OS4wMzgwODU5Mzc1QzcyNy40ODAwNTg1OTM3NSAyNzYuOTU1MDc4MTI1IDcyNy45MzcyNjU2MjUgMjczLjA3OTEwMTU2MjUgNzI4LjU4MjczNDM3NSAyNjcuNzAwMTk1MzEyNUM3MzAuNzM0Mjk2ODc0OTk5OSAyNzMuMzQyNzczNDM3NSA3MzEuODM2OTcyNjU2MjQ5OSAyNzYuMTM3Njk1MzEyNSA3MzMuMjM1NDg4MjgxMjQ5OSAyNzkuMDkwODIwMzEyNUw3NDMuMjEzMzU5Mzc1IDMwMC4wSDc1MC4xNzkwNDI5Njg3NUw3NTYuODIxOTkyMTg3NSAyNjAuNzEyODkwNjI1SDc1MC42MDkzNTU0Njg3NUw3NDYuODQ0MTIxMDkzNzUgMjgzLjA3MjI2NTYyNUM3NDYuNDQwNzAzMTI0OTk5OSAyODUuNDcxNjc5Njg3NSA3NDUuOTAyODEyNSAyODkuMjQyMTg3NSA3NDUuNTUzMTgzNTkzNzUgMjkzLjE0NDUzMTI1Qzc0NC4zMTYwMzUxNTYyNSAyODkuMDMxMjUgNzQyLjkxNzUxOTUzMTI0OTkgMjg1Ljg2NzE4NzUgNzQyLjExMDY4MzU5Mzc1IDI4NC4xMDA1ODU5Mzc1TDczMC45NzYzNDc2NTYyNDk5IDI2MC43MTI4OTA2MjVINzI0LjAzNzU1ODU5Mzc1Wk03NzYuMTU5MTYwMTU2MjQ5OSAzMDAuNTI3MzQzNzVDNzg1Ljc4NzQwMjM0Mzc0OTkgMzAwLjUyNzM0Mzc1IDc5My41NTk5MjE4NzQ5OTk5IDI5NC40MzY1MjM0Mzc1IDc5NS4yMjczODI4MTI1IDI4NC41NDg4MjgxMjVMNzk2LjAwNzMyNDIxODc0OTkgMjc5Ljg1NTQ2ODc1SDc4MC4xOTMzMzk4NDM3NDk5TDc3OS4zNTk2MDkzNzQ5OTk5IDI4NC44MTI1SDc4OS4yMDMwMDc4MTI0OTk5Qzc4Ny45NjU4NTkzNzQ5OTk5IDI5MC45ODI0MjE4NzUgNzgyLjg4Mjc5Mjk2ODc0OTkgMjk1LjA0Mjk2ODc1IDc3Ni40MDEyMTA5Mzc1IDI5NS4wNDI5Njg3NUM3NzAuNTM4MjAzMTI0OTk5OSAyOTUuMDQyOTY4NzUgNzY2LjY2NTM5MDYyNDk5OTkgMjkxLjM3NzkyOTY4NzUgNzY2LjY2NTM5MDYyNDk5OTkgMjg0LjQ2OTcyNjU2MjVDNzY2LjY2NTM5MDYyNDk5OTkgMjc1LjI5Mzk0NTMxMjUgNzcyLjM2NzAzMTI1IDI2NS42Njk5MjE4NzUgNzgxLjgzMzkwNjI0OTk5OTkgMjY1LjY2OTkyMTg3NUM3ODYuOTQzODY3MTg3NDk5OSAyNjUuNjY5OTIxODc1IDc4OS44NDg0NzY1NjI1IDI2OC41NDM5NDUzMTI1IDc5MC41NDc3MzQzNzQ5OTk5IDI3My4xMzE4MzU5Mzc1SDc5Ni44NDEwNTQ2ODc0OTk5Qzc5Ni43ODcyNjU2MjQ5OTk5IDI2NS40MDYyNSA3OTAuNzM1OTk2MDkzNzQ5OSAyNjAuMTg1NTQ2ODc1IDc4Mi4wMjIxNjc5Njg3NSAyNjAuMTg1NTQ2ODc1Qzc2OC44NzA3NDIxODc0OTk5IDI2MC4xODU1NDY4NzUgNzYwLjYxNDEyMTA5Mzc0OTkgMjcyLjEyOTg4MjgxMjUgNzYwLjYxNDEyMTA5Mzc0OTkgMjg0LjcwNzAzMTI1Qzc2MC42MTQxMjEwOTM3NDk5IDI5NC41NDE5OTIxODc1IDc2Ni41NTc4MTI1IDMwMC41MjczNDM3NSA3NzYuMTU5MTYwMTU2MjQ5OSAzMDAuNTI3MzQzNzVaTTgzMS45OTIyMDcwMzEyNDk4IDMwMC41MjczNDM3NUM4NDEuNjIwNDQ5MjE4NzQ5OSAzMDAuNTI3MzQzNzUgODQ5LjM5Mjk2ODc0OTk5OTggMjk0LjQzNjUyMzQzNzUgODUxLjA2MDQyOTY4NzQ5OTkgMjg0LjU0ODgyODEyNUw4NTEuODQwMzcxMDkzNzQ5OCAyNzkuODU1NDY4NzVIODM2LjAyNjM4NjcxODc0OThMODM1LjE5MjY1NjI0OTk5OTggMjg0LjgxMjVIODQ1LjAzNjA1NDY4NzQ5OThDODQzLjc5ODkwNjI0OTk5OTggMjkwLjk4MjQyMTg3NSA4MzguNzE1ODM5ODQzNzQ5OCAyOTUuMDQyOTY4NzUgODMyLjIzNDI1NzgxMjQ5OTkgMjk1LjA0Mjk2ODc1QzgyNi4zNzEyNDk5OTk5OTk4IDI5NS4wNDI5Njg3NSA4MjIuNDk4NDM3NDk5OTk5OCAyOTEuMzc3OTI5Njg3NSA4MjIuNDk4NDM3NDk5OTk5OCAyODQuNDY5NzI2NTYyNUM4MjIuNDk4NDM3NDk5OTk5OCAyNzUuMjkzOTQ1MzEyNSA4MjguMjAwMDc4MTI0OTk5OSAyNjUuNjY5OTIxODc1IDgzNy42NjY5NTMxMjQ5OTk4IDI2NS42Njk5MjE4NzVDODQyLjc3NjkxNDA2MjQ5OTggMjY1LjY2OTkyMTg3NSA4NDUuNjgxNTIzNDM3NDk5OSAyNjguNTQzOTQ1MzEyNSA4NDYuMzgwNzgxMjQ5OTk5OCAyNzMuMTMxODM1OTM3NUg4NTIuNjc0MTAxNTYyNDk5OEM4NTIuNjIwMzEyNDk5OTk5OCAyNjUuNDA2MjUgODQ2LjU2OTA0Mjk2ODc0OTggMjYwLjE4NTU0Njg3NSA4MzcuODU1MjE0ODQzNzQ5OSAyNjAuMTg1NTQ2ODc1QzgyNC43MDM3ODkwNjI0OTk4IDI2MC4xODU1NDY4NzUgODE2LjQ0NzE2Nzk2ODc0OTggMjcyLjEyOTg4MjgxMjUgODE2LjQ0NzE2Nzk2ODc0OTggMjg0LjcwNzAzMTI1QzgxNi40NDcxNjc5Njg3NDk4IDI5NC41NDE5OTIxODc1IDgyMi4zOTA4NTkzNzQ5OTk5IDMwMC41MjczNDM3NSA4MzEuOTkyMjA3MDMxMjQ5OCAzMDAuNTI3MzQzNzVaTTg1Ni4wMzU5MTc5Njg3NDk4IDMwMC4wSDg2Mi4wMDY1MDM5MDYyNDk4TDg2NS41NTY1ODIwMzEyNDk4IDI3OC44NTM1MTU2MjVDODY2LjA0MDY4MzU5Mzc0OTggMjc1LjkwMDM5MDYyNSA4NjYuNzY2ODM1OTM3NDk5OCAyNzAuOTY5NzI2NTYyNSA4NjcuMzg1NDEwMTU2MjQ5OCAyNjYuNzUwOTc2NTYyNUM4NjguMTExNTYyNDk5OTk5OCAyNzEuNjI4OTA2MjUgODY4Ljg2NDYwOTM3NDk5OTggMjc2LjUzMzIwMzEyNSA4NjkuMzQ4NzEwOTM3NDk5OCAyNzguODUzNTE1NjI1TDg3NC4xMDkwNDI5Njg3NDk4IDMwMC4wSDg3OS4zNTM0NzY1NjI0OTk3TDg5MS4xMDYzODY3MTg3NDk4IDI3OC44NTM1MTU2MjVDODkyLjQ1MTExMzI4MTI0OTggMjc2LjQyNzczNDM3NSA4OTQuOTc5MTk5MjE4NzQ5OCAyNzEuMzY1MjM0Mzc1IDg5Ny4yMTE0NDUzMTI0OTk4IDI2Ni41NjY0MDYyNUM4OTYuNDMxNTAzOTA2MjQ5OCAyNzAuNjc5Njg3NSA4OTUuNDA5NTExNzE4NzQ5OSAyNzUuNzY4NTU0Njg3NSA4OTQuODk4NTE1NjI0OTk5OCAyNzguODUzNTE1NjI1TDg5MS4zNDg0Mzc0OTk5OTk4IDMwMC4wSDg5Ny40NTM0OTYwOTM3NDk4TDkwNC4wOTY0NDUzMTI0OTk4IDI2MC43MTI4OTA2MjVIODk1LjAwNjA5Mzc0OTk5OThMODgyLjU1MzkyNTc4MTI0OTcgMjgzLjI1NjgzNTkzNzVDODgxLjQyNDM1NTQ2ODc0OTggMjg1LjM2NjIxMDkzNzUgODc5LjQ4Nzk0OTIxODc0OTggMjg5LjcxNjc5Njg3NSA4NzcuOTI4MDY2NDA2MjQ5NyAyOTMuMzAyNzM0Mzc1Qzg3Ny41Nzg0Mzc0OTk5OTk4IDI4OS43OTU4OTg0Mzc1IDg3Ny4wNjc0NDE0MDYyNDk4IDI4NS4zOTI1NzgxMjUgODc2LjYzNzEyODkwNjI0OTggMjgzLjI1NjgzNTkzNzVMODcxLjcxNTQyOTY4NzQ5OTcgMjYwLjcxMjg5MDYyNUg4NjIuNjc4ODY3MTg3NDk5OFpNOTA2LjMwMTc5Njg3NDk5OTggMzAwLjBIOTIxLjkyNzUxOTUzMTI0OThDOTMxLjE3OTIzODI4MTI0OTggMzAwLjAgOTM2LjAyMDI1MzkwNjI0OTggMjk1LjY3NTc4MTI1IDkzNi45ODg0NTcwMzEyNDk4IDI4OS43NDMxNjQwNjI1QzkzOC4wMTA0NDkyMTg3NDk4IDI4My41NzMyNDIxODc1IDkzNC4yNDUyMTQ4NDM3NDk3IDI3OS45MzQ1NzAzMTI1IDkzMC4yNjQ4MjQyMTg3NDk4IDI3OS43MjM2MzI4MTI1VjI3OS40MzM1OTM3NUM5MzQuMjQ1MjE0ODQzNzQ5NyAyNzguNDg0Mzc1IDkzNy43OTUyOTI5Njg3NDk4IDI3Ni4wMDU4NTkzNzUgOTM4LjU0ODMzOTg0Mzc0OTggMjcxLjMxMjVDOTM5LjUxNjU0Mjk2ODc0OTggMjY1LjQwNjI1IDkzNi4wNDcxNDg0Mzc0OTk4IDI2MC43MTI4OTA2MjUgOTI3LjUyMTU4MjAzMTI0OTcgMjYwLjcxMjg5MDYyNUg5MTIuOTQ0NzQ2MDkzNzQ5OFpNOTEzLjMyMTI2OTUzMTI0OTggMjk0Ljg1ODM5ODQzNzUgOTE1LjQ0NTkzNzQ5OTk5OTggMjgyLjM2MDM1MTU2MjVIOTI0LjUwOTM5NDUzMTI0OThDOTI5LjEzNTI1MzkwNjI0OTggMjgyLjM2MDM1MTU2MjUgOTMxLjY2MzMzOTg0Mzc0OTggMjg1LjA0OTgwNDY4NzUgOTMxLjA3MTY2MDE1NjI0OTggMjg4LjY4ODQ3NjU2MjVDOTMwLjUzMzc2OTUzMTI0OTggMjkyLjExNjIxMDkzNzUgOTI3LjY1NjA1NDY4NzQ5OTggMjk0Ljg1ODM5ODQzNzUgOTIxLjc5MzA0Njg3NDk5OTggMjk0Ljg1ODM5ODQzNzVaTTkxNi4yMjU4Nzg5MDYyNDk4IDI3Ny43MTk3MjY1NjI1IDkxOC4yNDI5Njg3NDk5OTk4IDI2NS44MjgxMjVIOTI2LjYwNzE2Nzk2ODc0OThDOTMxLjM5NDM5NDUzMTI0OTggMjY1LjgyODEyNSA5MzMuMDM0OTYwOTM3NDk5OCAyNjguMTIyMDcwMzEyNSA5MzIuNTIzOTY0ODQzNzQ5OCAyNzEuMTgwNjY0MDYyNUM5MzEuODUxNjAxNTYyNDk5OCAyNzUuMTM1NzQyMTg3NSA5MjguMDg2MzY3MTg3NDk5OCAyNzcuNzE5NzI2NTYyNSA5MjQuMTA1OTc2NTYyNDk5OCAyNzcuNzE5NzI2NTYyNVpNOTQyLjQ3NDk0MTQwNjI0OTkgMzAwLjBIOTQ4LjYwNjg5NDUzMTI0OThMOTUxLjU2NTI5Mjk2ODc0OTkgMjgyLjQ5MjE4NzVIOTcxLjQ0MDM1MTU2MjQ5OThMOTY4LjQ1NTA1ODU5Mzc0OTkgMzAwLjBIOTc0LjYxMzkwNjI0OTk5OTlMOTgxLjI1Njg1NTQ2ODc0OTggMjYwLjcxMjg5MDYyNUg5NzUuMDk4MDA3ODEyNDk5OUw5NzIuMjc0MDgyMDMxMjQ5OCAyNzcuMzI0MjE4NzVIOTUyLjQ1MjgxMjQ5OTk5OThMOTU1LjI0OTg0Mzc0OTk5OTkgMjYwLjcxMjg5MDYyNUg5NDkuMTE3ODkwNjI0OTk5OVoiIGZpbGw9IiMzYTNhM2EiLz48L3N2Zz4=";
+
+/* ================= Speicher ================= */
+const store = {
+  get(k,d){ try{ const v=localStorage.getItem("fd2_"+k); return v==null?d:JSON.parse(v); }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem("fd2_"+k, JSON.stringify(v)); return true; }catch(e){ toast("Speichern im Browser nicht möglich"); return false; } }
+};
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+const FIELDS = [
+  ["logo","Logo",true],["datum","Datum & Uhrzeit",true],["coord","Koordinaten",true],["hoehe","Meereshöhe",true],
+  ["adresse","Adresse",true],["projekt","Baustelle (Nr. & Bezeichnung)",true],["kat","Kategorie",true],
+  ["lage","Lage / Bauteil",true],["bem","Bemerkung",true],["acc","GPS-Genauigkeit",false],
+  ["land","Bundesland",false],["user","Fotograf",false]
+];
+const DEF = {
+  firma:"Schwall Bauunternehmung GmbH", user:"", logo:null, logoBg:"glow", date:"ymd", coord:"utm", size:"m", pos:"bl",
+  save: isIOS ? "share" : "auto", orig:false, ask:true, geo:true,
+  fields:Object.fromEntries(FIELDS.map(f=>[f[0],f[2]])),
+  kats:["Allgemein","Vorher","Nachher","Baufortschritt","Asphalteinbau","Pflaster","Aufmaß","Leitungen / Sparten","Mangel / Schaden","Verkehrssicherung","Lieferschein / Material"],
+  lagen:["Fahrbahn rechts","Fahrbahn links","Gehweg","Radweg","Einmündung","Kreuzung","Schacht","Straßeneinlauf","Bankett","Rinne","Baustelleneinrichtung"]
+};
+let S = Object.assign({}, DEF, store.get("settings",{})); S.fields = Object.assign({}, DEF.fields, S.fields||{});
+let P = store.get("projects",[]);
+let A = Object.assign({pid:null, kat:"Allgemein", lage:"", bem:""}, store.get("active",{}));
+const saveS=()=>store.set("settings",S), saveP=()=>store.set("projects",P), saveA=()=>store.set("active",A);
+
+/* Fotos, die noch nicht im Handy gesichert sind, überleben in IndexedDB einen App-Neustart */
+const DB = {
+  db:null,
+  open(){ return new Promise(res=>{ try{ const r=indexedDB.open("fotodoku",1);
+    r.onupgradeneeded=()=>r.result.createObjectStore("photos",{keyPath:"id"});
+    r.onsuccess=()=>{ this.db=r.result; res(true); }; r.onerror=()=>res(false); }catch(e){ res(false); } }); },
+  tx(mode){ return this.db.transaction("photos",mode).objectStore("photos"); },
+  put(o){ if(!this.db) return; try{ this.tx("readwrite").put(o); }catch(e){} },
+  del(id){ if(!this.db) return; try{ this.tx("readwrite").delete(id); }catch(e){} },
+  all(){ return new Promise(res=>{ if(!this.db) return res([]); try{ const r=this.tx("readonly").getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>res([]); }catch(e){ res([]); } }); }
+};
+
+/* ================= Helfer ================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+let tt; function toast(m,ms){ const t=$("toast"); t.textContent=m; t.classList.add("on"); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("on"),ms||2400); }
+const curProj=()=>P.find(p=>p.id===A.pid)||null;
+const safeName=s=>String(s||"").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/Ä/g,"Ae").replace(/Ö/g,"Oe").replace(/Ü/g,"Ue").replace(/ß/g,"ss")
+  .normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9+\-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,40);
+const ascii=s=>String(s||"").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/Ä/g,"Ae").replace(/Ö/g,"Oe")
+  .replace(/Ü/g,"Ue").replace(/ß/g,"ss").replace(/–/g,"-").normalize("NFD").replace(/[^\x20-\x7e]/g,"");
+const openSheet=id=>$(id).classList.add("on"), closeSheet=id=>$(id).classList.remove("on");
+document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>closeSheet(b.dataset.close)));
+document.querySelectorAll(".sheet").forEach(s=>s.addEventListener("click",e=>{ if(e.target===s) closeSheet(s.id); }));
+
+/* ================= UTM (ETRS89/WGS84) ================= */
+function toUTM(lat, lon){
+  const a=6378137, f=1/298.257223563, k0=0.9996, e2=f*(2-f), ep2=e2/(1-e2);
+  let zone=Math.floor((lon+180)/6)+1;
+  if(lat>=56&&lat<64&&lon>=3&&lon<12) zone=32;
+  if(lat>=72&&lat<84){ if(lon>=0&&lon<9)zone=31; else if(lon>=9&&lon<21)zone=33; else if(lon>=21&&lon<33)zone=35; else if(lon>=33&&lon<42)zone=37; }
+  const lon0=((zone-1)*6-180+3)*Math.PI/180, phi=lat*Math.PI/180, lam=lon*Math.PI/180;
+  const N=a/Math.sqrt(1-e2*Math.sin(phi)**2), T=Math.tan(phi)**2, C=ep2*Math.cos(phi)**2, A_=Math.cos(phi)*(lam-lon0);
+  const M=a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*phi-(3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*phi)
+        +(15*e2*e2/256+45*e2**3/1024)*Math.sin(4*phi)-(35*e2**3/3072)*Math.sin(6*phi));
+  const E=k0*N*(A_+(1-T+C)*A_**3/6+(5-18*T+T*T+72*C-58*ep2)*A_**5/120)+500000;
+  let Nn=k0*(M+N*Math.tan(phi)*(A_*A_/2+(5-T+9*C+4*C*C)*A_**4/24+(61-58*T+T*T+600*C-330*ep2)*A_**6/720));
+  if(lat<0) Nn+=10000000;
+  const band="CDEFGHJKLMNPQRSTUVWXX"[Math.floor((lat+80)/8)]||"";
+  return {zone, band, E:Math.round(E), N:Math.round(Nn)};
+}
+
+/* ================= GPS & Adresse ================= */
+let G=null, ADDR=null, lastGeo=null, geoBusy=false;
+function startGps(){
+  if(!("geolocation" in navigator)){ badge("Kein GPS","bad"); return; }
+  navigator.geolocation.watchPosition(p=>{
+    G={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy, alt:p.coords.altitude};
+    badge("GPS ±"+Math.round(G.acc)+" m", G.acc<=20?"ok":""); lookupAddr(false); drawPreview();
+  }, err=>{ badge(err.code===1?"GPS aus":"Kein GPS","bad"); if(err.code===1) toast("Standort bitte in den Einstellungen des Handys/Browsers erlauben",4000); },
+  {enableHighAccuracy:true, maximumAge:3000, timeout:30000});
+}
+function badge(t,c){ const b=$("gpsBadge"); b.textContent=t; b.className="pill gps "+(c||""); }
+$("gpsBadge").onclick=()=>toast(G ? (fmtCoord()+"\n"+(addrText()||"Adresse unbekannt")) : "Noch kein GPS-Signal",3500);
+function dist(a,b){ const R=6371000,r=Math.PI/180,dA=(b.lat-a.lat)*r,dO=(b.lon-a.lon)*r;
+  const x=Math.sin(dA/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dO/2)**2; return 2*R*Math.asin(Math.sqrt(x)); }
+async function lookupAddr(force){
+  if(!S.geo||!G||geoBusy||!navigator.onLine) return;
+  if(!force&&lastGeo&&dist(lastGeo,G)<20&&Date.now()-lastGeo.t<120000) return;
+  geoBusy=true;
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=de&lat=${G.lat}&lon=${G.lon}`);
+    if(!r.ok) throw 0; const a=(await r.json()).address||{};
+    ADDR={ str:[a.road||a.pedestrian||a.footway||a.path||a.square||a.track||"", a.house_number||""].join(" ").trim(),
+           plz:a.postcode||"", ort:a.city||a.town||a.village||a.municipality||a.hamlet||"", land:a.state||"" };
+    lastGeo={lat:G.lat,lon:G.lon,t:Date.now()};
+  }catch(e){}
+  geoBusy=false; drawPreview();
+}
+function addrText(){
+  if(ADDR){ const t=[ADDR.str,[ADDR.plz,ADDR.ort].filter(Boolean).join(" ")].filter(Boolean).join(", "); if(t) return t; }
+  const p=curProj(); return p&&p.ort ? p.ort : "";
+}
+function fmtCoord(){
+  if(!G) return "";
+  if(S.coord==="dec") return Math.abs(G.lat).toFixed(6)+"° "+(G.lat>=0?"N":"S")+", "+Math.abs(G.lon).toFixed(6)+"° "+(G.lon>=0?"E":"W");
+  const u=toUTM(G.lat,G.lon);
+  return S.coord==="utmne" ? `N ${u.N}  E ${u.E}` : `${u.zone}${u.band} ${u.E} ${u.N}`;
+}
+function fmtDate(d){
+  const D=pad(d.getDate()),M=pad(d.getMonth()+1),Y=d.getFullYear(),h=pad(d.getHours()),m=pad(d.getMinutes()),s=pad(d.getSeconds());
+  return {ymd:`${Y}.${M}.${D} ${h}:${m}`, dmy:`${D}.${M}.${Y} ${h}:${m}`, dmy2:`${D}.${M}.${String(Y).slice(2)}, ${h}:${m}`, dmys:`${D}.${M}.${Y} ${h}:${m}:${s}`}[S.date]||`${Y}.${M}.${D} ${h}:${m}`;
+}
+
+/* ================= Stempel ================= */
+let logoImg=null;
+function getLogo(){
+  const src=S.logo||STD_LOGO;
+  if(logoImg&&logoImg._src===src) return Promise.resolve(logoImg.complete&&logoImg.naturalWidth?logoImg:null);
+  return new Promise(res=>{ const i=new Image(); i._src=src; i.onload=()=>{ logoImg=i; res(i); }; i.onerror=()=>res(null); i.src=src; });
+}
+function stampLines(now){
+  const f=S.fields, p=curProj(), L=[];
+  if(f.datum) L.push(fmtDate(now));
+  if(f.coord&&G) L.push(fmtCoord()+(f.acc?`  (±${Math.round(G.acc)} m)`:""));
+  else if(f.acc&&G) L.push(`GPS ±${Math.round(G.acc)} m`);
+  if(f.hoehe&&G&&G.alt!=null) L.push(`Meereshöhe: ${Math.round(G.alt)}m`);
+  if(f.adresse){ const a=addrText(); if(a) L.push(a); }
+  if(f.land&&ADDR&&ADDR.land) L.push(ADDR.land);
+  if(f.projekt&&p) L.push((p.nr?p.nr+" · ":"")+p.name);
+  const kl=[f.kat&&A.kat&&A.kat!=="Allgemein"?A.kat:"", f.lage?A.lage:""].filter(Boolean).join(" · "); if(kl) L.push(kl);
+  if(f.bem&&A.bem) L.push(A.bem);
+  if(f.user&&S.user) L.push("Foto: "+S.user);
+  return L;
+}
+function wrap(ctx,text,maxW){ const w=text.split(" "),out=[]; let l="";
+  for(const x of w){ const t=l?l+" "+x:x; if(ctx.measureText(t).width>maxW&&l){ out.push(l); l=x; } else l=t; } if(l) out.push(l); return out; }
+/* zeichnet den Stempel wie in der Vorlage: Logo + weiße Schrift unten links */
+function drawStamp(ctx,W,H,lines,logo){
+  const base=Math.min(W,H)*({s:0.028,m:0.034,l:0.042}[S.size]||0.034);
+  const mx=base*0.7, my=base*0.8, right=S.pos==="br", maxW=W-2*mx;
+  ctx.save();
+  ctx.font=`500 ${Math.round(base)}px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif`;
+  ctx.textBaseline="alphabetic"; ctx.textAlign=right?"right":"left";
+  const rows=[]; for(const l of lines) rows.push(...wrap(ctx,l,maxW));
+  const lh=base*1.24;
+  let y=H-my-(rows.length-1)*lh;
+  const x=right?W-mx:mx;
+  if(logo&&S.fields.logo){
+    let w=base*8.6, h=w*logo.naturalHeight/logo.naturalWidth;
+    if(h>base*3.2){ h=base*3.2; w=h*logo.naturalWidth/logo.naturalHeight; }
+    const lx=right?W-mx-w:mx, ly=y-base*1.05-h;
+    if(S.logoBg==="box"){ const p=base*0.3; ctx.fillStyle="rgba(255,255,255,.9)";
+      if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(lx-p,ly-p,w+2*p,h+2*p,base*0.25); ctx.fill(); } else ctx.fillRect(lx-p,ly-p,w+2*p,h+2*p); }
+    if(S.logoBg==="glow"){ ctx.shadowColor="rgba(255,255,255,.95)"; ctx.shadowBlur=base*0.35; ctx.drawImage(logo,lx,ly,w,h); ctx.shadowBlur=base*0.15; }
+    ctx.drawImage(logo,lx,ly,w,h); ctx.shadowBlur=0;
+  }
+  ctx.fillStyle="#fff"; ctx.shadowColor="rgba(0,0,0,.85)"; ctx.shadowBlur=base*0.18; ctx.shadowOffsetX=ctx.shadowOffsetY=Math.max(1,base*0.04);
+  for(const r of rows){ ctx.fillText(r,x,y); y+=lh; }
+  ctx.restore();
+}
+
+/* ================= Kamera ================= */
+const video=$("video"), ovl=$("ovl");
+let stream=null, track=null, torchOn=false, camReady=false;
+async function startCam(){
+  stopCam();
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ camErr("Live-Kamera wird von diesem Browser nicht unterstützt.<br>Bitte das 📷-Symbol unten rechts nutzen."); return; }
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}, width:{ideal:4032}, height:{ideal:3024}}});
+    track=stream.getVideoTracks()[0]; video.srcObject=stream; await video.play().catch(()=>{});
+    camErr(""); setupCaps();
+  }catch(e){
+    camErr(location.protocol!=="https:"&&location.hostname!=="localhost" ? "Die Kamera funktioniert nur, wenn die App über https:// geöffnet wird."
+      : "Kein Kamerazugriff. Bitte Kamera für diese Seite erlauben<br>oder das 📷-Symbol unten rechts nutzen.");
+  }
+}
+function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; track=null; camReady=false; } }
+function camErr(m){ $("camErr").innerHTML=m; $("camErr").classList.toggle("on",!!m); }
+function setupCaps(){
+  const caps=track&&track.getCapabilities?track.getCapabilities():{};
+  $("btnTorch").hidden=!caps.torch; torchOn=false; $("btnTorch").classList.remove("on");
+  const zb=$("zoomBox"); zb.innerHTML="";
+  if(caps.zoom&&caps.zoom.max>1){
+    const steps=[1,2,3,5].filter(z=>z>=caps.zoom.min&&z<=caps.zoom.max);
+    steps.forEach(z=>{ const b=document.createElement("button"); b.className="pill round"+(z===1?" on":""); b.textContent=z+"×";
+      b.onclick=()=>{ track.applyConstraints({advanced:[{zoom:z}]}).catch(()=>{}); zb.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); }; zb.appendChild(b); });
+    zb.classList.toggle("on",steps.length>1);
+  } else zb.classList.remove("on");
+}
+$("btnTorch").onclick=()=>{ if(!track) return; torchOn=!torchOn; track.applyConstraints({advanced:[{torch:torchOn}]}).catch(()=>{}); $("btnTorch").classList.toggle("on",torchOn); };
+video.addEventListener("loadedmetadata",()=>{ camReady=true; layoutOvl(); });
+video.addEventListener("resize",layoutOvl);
+window.addEventListener("resize",()=>setTimeout(layoutOvl,200));
+document.addEventListener("visibilitychange",()=>{ if(document.hidden) stopCam(); else startCam(); });
+
+/* Vorschau-Ebene liegt exakt über dem sichtbaren Videobild */
+let vr={x:0,y:0,w:0,h:0};
+function layoutOvl(){
+  const vw=video.videoWidth, vh=video.videoHeight, cw=innerWidth, ch=innerHeight;
+  if(!vw||!vh){ return; }
+  const k=Math.min(cw/vw,ch/vh); vr={w:vw*k,h:vh*k,x:(cw-vw*k)/2,y:(ch-vh*k)/2};
+  const dpr=Math.min(devicePixelRatio||1,2);
+  ovl.style.left=vr.x+"px"; ovl.style.top=vr.y+"px"; ovl.style.width=vr.w+"px"; ovl.style.height=vr.h+"px";
+  ovl.width=Math.round(vr.w*dpr); ovl.height=Math.round(vr.h*dpr);
+  // Detail-Knopf über dem Stempel halten, wenn das Bild bis unten reicht
+  drawPreview();
+}
+async function drawPreview(){
+  if(!ovl.width) return;
+  const ctx=ovl.getContext("2d"); ctx.clearRect(0,0,ovl.width,ovl.height);
+  // Schriftgröße bezieht sich auf das echte Foto – Vorschau proportional
+  drawStamp(ctx,ovl.width,ovl.height,stampLines(new Date()),await getLogo());
+}
+setInterval(drawPreview,15000);
+
+/* ================= Aufnahme ================= */
+let busy=false;
+$("shutter").onclick=async()=>{
+  if(busy) return;
+  if(!camReady||!video.videoWidth){ $("inCam").click(); return; }
+  busy=true; const fl=$("flash"); fl.classList.add("on"); setTimeout(()=>fl.classList.remove("on"),60);
+  try{
+    const W=video.videoWidth,H=video.videoHeight, c=document.createElement("canvas"); c.width=W; c.height=H;
+    c.getContext("2d").drawImage(video,0,0,W,H);
+    await finish(c);
+  }catch(e){ console.error(e); toast("Foto konnte nicht erstellt werden"); }
+  busy=false;
+};
+$("inCam").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  busy=true; toast("Foto wird gestempelt …");
+  try{
+    const url=URL.createObjectURL(f), img=await new Promise((r,j)=>{ const i=new Image(); i.onload=()=>r(i); i.onerror=j; i.src=url; });
+    let W=img.naturalWidth,H=img.naturalHeight; const mx=4032; if(Math.max(W,H)>mx){ const k=mx/Math.max(W,H); W=Math.round(W*k); H=Math.round(H*k); }
+    const c=document.createElement("canvas"); c.width=W; c.height=H; c.getContext("2d").drawImage(img,0,0,W,H); URL.revokeObjectURL(url);
+    await finish(c);
+  }catch(err){ toast("Foto konnte nicht verarbeitet werden"); }
+  busy=false;
+};
+async function finish(c){
+  const now=new Date(), meta=metaFor(now), base=fileBase(now);
+  let orig=null;
+  if(S.orig) orig=await addExif(await toBlob(c), meta);
+  drawStamp(c.getContext("2d"),c.width,c.height,stampLines(now),await getLogo());
+  const blob=await addExif(await toBlob(c), meta);
+  const item={id:base+"_"+Math.random().toString(36).slice(2,6), name:base+".jpg", blob, saved:false, t:now.getTime()};
+  addPhoto(item);
+  if(orig) addPhoto({id:item.id+"_o", name:base+"_original.jpg", blob:orig, saved:false, t:now.getTime()});
+  if(S.save==="auto"){
+    download(item); if(orig) download(PH.find(p=>p.id===item.id+"_o"));
+    toast("Gespeichert ✓");
+  } else toast("Foto aufgenommen – später „Bilder sichern“");
+}
+const toBlob=c=>new Promise(r=>c.toBlob(r,"image/jpeg",0.92));
+function fileBase(now){
+  const p=curProj(), d=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  return [p&&p.nr?safeName(p.nr):"", p?safeName(p.name):"", d, A.kat&&A.kat!=="Allgemein"?safeName(A.kat):"", safeName(A.lage)].filter(Boolean).join("_");
+}
+function metaFor(now){
+  const p=curProj(), desc=[p?(p.nr?p.nr+" ":"")+p.name:"", A.kat, A.lage, A.bem, addrText()].filter(Boolean).join(" | ");
+  return {desc:ascii(desc), artist:ascii([S.user,S.firma].filter(Boolean).join(", ")),
+    dt:`${now.getFullYear()}:${pad(now.getMonth()+1)}:${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`, gps:G};
+}
+
+/* ================= EXIF: Datum, Beschreibung, GPS ================= */
+function buildTiff(m){
+  const enc=s=>new TextEncoder().encode(s+"\0");
+  const u32=v=>{ const b=new Uint8Array(4); new DataView(b.buffer).setUint32(0,v); return b; };
+  const rat=a=>{ const b=new Uint8Array(a.length*8),dv=new DataView(b.buffer); a.forEach(([n,d],i)=>{dv.setUint32(i*8,n);dv.setUint32(i*8+4,d);}); return b; };
+  const E=(tag,type,count,data)=>({tag,type,count,data});
+  const ifd0=[]; if(m.desc) ifd0.push(E(0x010E,2,0,enc(m.desc)));
+  ifd0.push(E(0x0131,2,0,enc("Schwall Foto-Doku")), E(0x0132,2,0,enc(m.dt)));
+  if(m.artist) ifd0.push(E(0x013B,2,0,enc(m.artist)));
+  ifd0.push(E(0x8769,4,1,u32(0))); const g=m.gps; if(g) ifd0.push(E(0x8825,4,1,u32(0)));
+  const exif=[E(0x9003,2,0,enc(m.dt)),E(0x9004,2,0,enc(m.dt))]; let gps=null;
+  if(g){ const dms=v=>{ v=Math.abs(v); const d=Math.floor(v),mf=(v-d)*60,mm=Math.floor(mf); return [[d,1],[mm,1],[Math.round((mf-mm)*600000),10000]]; };
+    gps=[E(0,1,4,new Uint8Array([2,3,0,0])),E(1,2,2,enc(g.lat>=0?"N":"S")),E(2,5,3,rat(dms(g.lat))),E(3,2,2,enc(g.lon>=0?"E":"W")),E(4,5,3,rat(dms(g.lon)))];
+    if(g.alt!=null) gps.push(E(5,1,1,new Uint8Array([g.alt<0?1:0])),E(6,5,1,rat([[Math.round(Math.abs(g.alt)*100),100]]))); }
+  for(const e of [...ifd0,...exif,...(gps||[])]) if(e.type===2) e.count=e.data.length;
+  const size=l=>{ let s=2+l.length*12+4; for(const e of l) if(e.data.length>4) s+=e.data.length+(e.data.length&1); return s; };
+  const oE=8+size(ifd0), oG=oE+size(exif), total=oG+(gps?size(gps):0);
+  ifd0.find(e=>e.tag===0x8769).data=u32(oE); if(gps) ifd0.find(e=>e.tag===0x8825).data=u32(oG);
+  const out=new Uint8Array(total), dv=new DataView(out.buffer); out.set([0x4D,0x4D,0,0x2A,0,0,0,8]);
+  const write=(l,off)=>{ l.sort((a,b)=>a.tag-b.tag); dv.setUint16(off,l.length); let d=off+2+l.length*12+4;
+    l.forEach((e,i)=>{ const p=off+2+i*12; dv.setUint16(p,e.tag); dv.setUint16(p+2,e.type); dv.setUint32(p+4,e.count);
+      if(e.data.length<=4) out.set(e.data,p+8); else { dv.setUint32(p+8,d); out.set(e.data,d); d+=e.data.length+(e.data.length&1); } });
+    dv.setUint32(off+2+l.length*12,0); };
+  write(ifd0,8); write(exif,oE); if(gps) write(gps,oG); return out;
+}
+async function addExif(blob,m){
+  try{ const b=new Uint8Array(await blob.arrayBuffer()); if(b[0]!==0xFF||b[1]!==0xD8) return blob;
+    const t=buildTiff(m), len=t.length+8; if(len>65535) return blob;
+    const app1=new Uint8Array(len+2); app1.set([0xFF,0xE1,len>>8,len&255,0x45,0x78,0x69,0x66,0,0]); app1.set(t,10);
+    let at=2; if(b[2]===0xFF&&b[3]===0xE0) at=4+(b[4]<<8|b[5]);
+    return new Blob([b.slice(0,at),app1,b.slice(at)],{type:"image/jpeg"});
+  }catch(e){ return blob; }
+}
+
+/* ================= Fotos & Speichern aufs Handy ================= */
+let PH=[];
+function addPhoto(it){ it.url=URL.createObjectURL(it.blob); PH.unshift(it); if(!it.saved) DB.put({id:it.id,name:it.name,blob:it.blob,saved:false,t:it.t});
+  if(PH.length>60){ const old=PH.pop(); URL.revokeObjectURL(old.url); } updThumb(); }
+function markSaved(list){ list.forEach(p=>{ p.saved=true; DB.del(p.id); }); updThumb(); }
+function updThumb(){
+  const open=PH.filter(p=>!p.saved).length;
+  $("cnt").textContent=open?open:""; $("btnGal").style.backgroundImage=PH[0]?`url(${PH[0].url})`:"";
+}
+function download(p){
+  const a=document.createElement("a"); a.href=p.url; a.download=p.name; document.body.appendChild(a); a.click(); a.remove(); markSaved([p]);
+}
+async function saveList(list){
+  if(!list.length) return;
+  const files=list.map(p=>new File([p.blob],p.name,{type:"image/jpeg"}));
+  if(navigator.canShare&&navigator.canShare({files})){
+    try{ await navigator.share({files}); markSaved(list); toast(list.length===1?"Gesichert ✓":list.length+" Fotos gesichert ✓"); }
+    catch(e){ if(e.name!=="AbortError") toast("Teilen nicht möglich"); }
+  } else { list.forEach(download); toast("Gespeichert ✓"); }
+  renderGal();
+}
+function renderGal(){
+  const open=PH.filter(p=>!p.saved);
+  const b=$("btnSaveAll"); b.hidden=!open.length; b.textContent=isIOS?`${open.length} Foto${open.length>1?"s":""} in „Fotos“ sichern`:`${open.length} Foto${open.length>1?"s":""} speichern`;
+  $("gal").innerHTML=PH.length?PH.map((p,i)=>`<div><img src="${p.url}" data-i="${i}" alt=""><span class="${p.saved?"":"open"}">${p.saved?"gesichert":"offen"}</span></div>`).join("")
+    :`<div class="empty">Noch keine Fotos.</div>`;
+  $("gal").querySelectorAll("img").forEach(im=>im.onclick=()=>showOne(PH[+im.dataset.i]));
+  $("galHint").textContent=isIOS?"iPhone: Im Menü „Bilder sichern“ wählen – dann liegen die Fotos ganz normal in der Fotos-App. Die App lädt nichts hoch.":
+    "Android: Fotos liegen im Ordner „Download“ und erscheinen in der Galerie. Die App lädt nichts hoch.";
+}
+$("btnSaveAll").onclick=()=>saveList(PH.filter(p=>!p.saved));
+$("btnGal").onclick=()=>{ renderGal(); openSheet("shGal"); };
+let one=null;
+function showOne(p){ one=p; $("big").src=p.url; $("oneName").textContent=p.name; openSheet("shOne"); }
+$("oneSave").onclick=()=>{ if(one) (S.save==="auto"?(download(one),toast("Gespeichert ✓"),renderGal()):saveList([one])); };
+$("oneDel").onclick=()=>{
+  const b=$("oneDel");
+  if(!one.saved&&!b.dataset.sure){ b.dataset.sure="1"; b.textContent="Noch nicht gesichert – wirklich löschen?"; return; }
+  delete b.dataset.sure; b.textContent="Aus der App löschen";
+  DB.del(one.id); URL.revokeObjectURL(one.url); PH=PH.filter(p=>p!==one); one=null; closeSheet("shOne"); renderGal(); updThumb();
+};
+window.addEventListener("beforeunload",e=>{ if(PH.some(p=>!p.saved)){ e.preventDefault(); e.returnValue=""; } });
+
+/* ================= Baustellen ================= */
+function renderTop(){
+  const p=curProj();
+  $("btnProj").innerHTML=p?`<b>${esc(p.nr||"Baustelle")}</b> ${esc(p.name)}`:"Baustelle wählen";
+  const d=[A.kat&&A.kat!=="Allgemein"?A.kat:"",A.lage,A.bem].filter(Boolean).join(" · ");
+  $("btnDetail").textContent=d||"＋ Kategorie / Lage / Bemerkung";
+  drawPreview();
+}
+$("btnProj").onclick=()=>showPicker();
+function showPicker(){
+  const L=$("pickList");
+  L.innerHTML=P.length?P.map(p=>`<div class="it${p.id===A.pid?" on":""}"><div class="n" data-id="${p.id}"><b>${esc((p.nr?p.nr+" · ":"")+p.name)}</b><small>${esc([p.ag,p.ort].filter(Boolean).join(" · "))}</small></div><button class="ico" data-e="${p.id}">✏️</button></div>`).join("")
+    :`<div class="empty">Noch keine Baustelle angelegt.</div>`;
+  L.querySelectorAll(".n").forEach(x=>x.onclick=()=>{ A.pid=x.dataset.id; saveA(); renderTop(); closeSheet("shPick"); });
+  L.querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>editProj(b.dataset.e));
+  openSheet("shPick");
+}
+$("pickNone").onclick=()=>{ A.pid=null; saveA(); renderTop(); closeSheet("shPick"); };
+$("pickNew").onclick=()=>editProj(null);
+let editId=null;
+function editProj(id){
+  editId=id; const p=P.find(x=>x.id===id)||{};
+  $("editTitle").textContent=id?"Baustelle bearbeiten":"Neue Baustelle";
+  $("eNr").value=p.nr||""; $("eName").value=p.name||""; $("eAg").value=p.ag||""; $("eOrt").value=p.ort||"";
+  $("eDel").hidden=!id; delete $("eDel").dataset.sure; $("eDel").textContent="Baustelle löschen"; openSheet("shEdit");
+}
+$("eSave").onclick=()=>{
+  const d={nr:$("eNr").value.trim(),name:$("eName").value.trim(),ag:$("eAg").value.trim(),ort:$("eOrt").value.trim()};
+  if(!d.name){ toast("Bitte eine Bezeichnung eingeben"); return; }
+  if(editId) Object.assign(P.find(x=>x.id===editId),d); else { const id="p"+Date.now().toString(36); P.unshift(Object.assign({id},d)); A.pid=id; saveA(); }
+  saveP(); renderTop(); closeSheet("shEdit"); closeSheet("shPick");
+};
+$("eDel").onclick=()=>{
+  const b=$("eDel"); if(!b.dataset.sure){ b.dataset.sure="1"; b.textContent="Wirklich löschen? Nochmal tippen"; return; }
+  P=P.filter(x=>x.id!==editId); if(A.pid===editId) A.pid=null; saveP(); saveA(); renderTop(); closeSheet("shEdit"); showPicker();
+};
+
+/* ================= Details ================= */
+$("btnDetail").onclick=()=>{ renderDetail(); openSheet("shDetail"); };
+function renderDetail(){
+  if(!S.kats.includes(A.kat)) A.kat=S.kats[0]||"";
+  $("katChips").innerHTML=S.kats.map(k=>`<button class="chip${k===A.kat?" on":""}" data-k="${esc(k)}">${esc(k)}</button>`).join("");
+  $("katChips").querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ A.kat=c.dataset.k; saveA(); renderDetail(); renderTop(); });
+  $("lageList").innerHTML=S.lagen.map(l=>`<option value="${esc(l)}">`).join("");
+  $("inLage").value=A.lage; $("inBem").value=A.bem;
+}
+$("inLage").oninput=e=>{ A.lage=e.target.value; saveA(); renderTop(); };
+$("inBem").oninput=e=>{ A.bem=e.target.value; saveA(); renderTop(); };
+$("dClear").onclick=()=>{ A.lage=""; A.bem=""; saveA(); renderDetail(); renderTop(); };
+
+/* ================= Einstellungen ================= */
+$("btnSet").onclick=()=>{ renderSet(); openSheet("shSet"); };
+function renderSet(){
+  $("sSave").value=S.save; $("sOrig").checked=S.orig; $("sDate").value=S.date; $("sCoord").value=S.coord; $("sSize").value=S.size; $("sPos").value=S.pos;
+  $("sLogoBg").value=S.logoBg; $("sFirma").value=S.firma; $("sUser").value=S.user; $("sLogoPrev").src=S.logo||STD_LOGO;
+  $("sKats").value=S.kats.join("\n"); $("sLagen").value=S.lagen.join("\n"); $("sAsk").checked=S.ask; $("sGeo").checked=S.geo;
+  $("saveHint").textContent=S.save==="auto"?"Jedes Foto wird sofort im Ordner „Download“ gespeichert und erscheint in der Galerie. Beim ersten Mal ggf. „Mehrere Downloads zulassen“ bestätigen.":
+    "Fotos sammeln sich in der App (Zähler am Vorschaubild). Mit „In Fotos sichern“ → „Bilder sichern“ landen alle auf einmal in der Fotos-App.";
+  $("fieldToggles").innerHTML=FIELDS.map(([k,l])=>`<div class="tog"><span>${l}</span><label class="sw"><input type="checkbox" data-f="${k}"${S.fields[k]?" checked":""}><i></i></label></div>`).join("");
+  $("fieldToggles").querySelectorAll("input").forEach(i=>i.onchange=()=>{ S.fields[i.dataset.f]=i.checked; saveS(); drawPreview(); });
+}
+const bindSel=(id,key,cb)=>$(id).onchange=e=>{ S[key]=e.target.type==="checkbox"?e.target.checked:e.target.value; saveS(); drawPreview(); cb&&cb(); };
+bindSel("sSave","save",renderSet); bindSel("sOrig","orig"); bindSel("sDate","date"); bindSel("sCoord","coord"); bindSel("sSize","size");
+bindSel("sPos","pos"); bindSel("sLogoBg","logoBg"); bindSel("sAsk","ask"); bindSel("sGeo","geo",()=>lookupAddr(true));
+$("sFirma").oninput=e=>{ S.firma=e.target.value; saveS(); };
+$("sUser").oninput=e=>{ S.user=e.target.value; saveS(); drawPreview(); };
+$("sLogo").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  const url=URL.createObjectURL(f), img=await new Promise(r=>{ const i=new Image(); i.onload=()=>r(i); i.src=url; });
+  const k=Math.min(1,1200/img.naturalWidth), c=document.createElement("canvas"); c.width=Math.round(img.naturalWidth*k); c.height=Math.round(img.naturalHeight*k);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+  S.logo=c.toDataURL("image/png"); if(saveS()){ renderSet(); drawPreview(); toast("Logo übernommen"); }
+};
+$("sLogoStd").onclick=()=>{ S.logo=null; saveS(); renderSet(); drawPreview(); };
+$("btnLists").onclick=()=>{ const ln=t=>t.split("\n").map(s=>s.trim()).filter(Boolean);
+  S.kats=ln($("sKats").value); if(!S.kats.length) S.kats=["Allgemein"]; S.lagen=ln($("sLagen").value); saveS(); toast("Listen gespeichert"); };
+$("btnExport").onclick=async()=>{
+  const data=JSON.stringify({app:"fotodoku",v:2,settings:Object.assign({},S,{user:""}),projects:P});
+  const f=new File([data],"FotoDoku_Baustellen.json",{type:"application/json"});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){ try{ await navigator.share({files:[f]}); }catch(e){} }
+  else { const a=document.createElement("a"); a.href=URL.createObjectURL(f); a.download=f.name; a.click(); }
+};
+$("inImport").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{ const d=JSON.parse(await f.text()); if(d.app!=="fotodoku") throw 0;
+    const user=S.user; S=Object.assign({},DEF,d.settings||{}); S.fields=Object.assign({},DEF.fields,S.fields||{}); S.user=user; S.save=isIOS?"share":"auto";
+    const ids=new Set(P.map(p=>p.id)); (d.projects||[]).forEach(p=>{ if(!ids.has(p.id)) P.push(p); });
+    saveS(); saveP(); renderSet(); renderTop(); toast("Import erfolgreich");
+  }catch(err){ toast("Datei konnte nicht gelesen werden"); }
+};
+
+/* ================= Start ================= */
+if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+(async()=>{
+  renderTop(); startGps(); startCam(); window.addEventListener("online",()=>lookupAddr(true));
+  if(await DB.open()){
+    const rest=(await DB.all()).sort((a,b)=>a.t-b.t);
+    rest.forEach(r=>addPhoto(Object.assign(r,{saved:false})));
+    if(rest.length) toast(`${rest.length} Foto(s) noch nicht gesichert – unten links antippen`,4500);
+  }
+  if(S.ask) showPicker();
+})();
+</script>
+</body>
+</html>
