@@ -1,5 +1,5 @@
 // Bei jedem Update diese Nummer hochzählen (z. B. fd-2.0.1), dann holen sich die Handys die neue Version.
-const VERSION = 'fd-2.0.0';
+const VERSION = 'fd-2.1.0';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {

@@ -7,128 +7,210 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Schwall Foto">
+<meta name="apple-mobile-web-app-title" content="Foto-Doku">
 <title>Schwall Foto-Doku</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
-  :root{--accent:#f07d00;--ink:#1b232b;--muted:#66727d;--line:#dde1e5;--bg:#f2f3f5;--ok:#2e8b57;--warn:#c0392b}
+  :root{
+    --accent:#f07d00; --accent2:#ff9a2e;
+    --bg:#000; --sheet:#151517; --card:#232326; --card2:#2e2e32; --line:#38383d;
+    --txt:#f5f5f7; --muted:#9a9aa1; --ok:#30d158; --warn:#ff453a;
+    --glass:rgba(28,28,30,.55);
+  }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;
-    font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+  html,body{margin:0;height:100%;background:#000;color:var(--txt);overflow:hidden;
+    font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-user-select:none;user-select:none;-webkit-font-smoothing:antialiased}
+  button{font:inherit;color:inherit}
+  [hidden]{display:none!important}
+  svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+  /* ---------- Kamera ---------- */
   #stage{position:fixed;inset:0;background:#000}
-  #video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+  #video{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;background:#000}
   #ovl{position:absolute;pointer-events:none}
-  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
-  #flash.on{opacity:.85;transition:none}
-  .topbar{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;
-    display:flex;gap:8px;align-items:center;background:linear-gradient(#000a,#0000)}
-  .pill{background:#0009;border:1px solid #ffffff33;color:#fff;border-radius:22px;padding:8px 12px;font:inherit;font-size:14px;
-    cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-  .pill.grow{flex:1;min-width:0;text-align:left}
-  .pill b{color:var(--accent)}
-  .gps{font-size:12px;padding:8px 10px}
-  .gps.ok{background:#2e8b57cc} .gps.bad{background:#c0392bcc}
-  .round{width:42px;height:42px;padding:0;display:grid;place-items:center;font-size:18px;flex:none}
-  .round.on{background:var(--accent);color:#000}
-  .detail{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 118px);display:flex;justify-content:center}
-  .detail .pill{max-width:100%}
-  .bottombar{position:absolute;left:0;right:0;bottom:0;padding:10px 24px calc(env(safe-area-inset-bottom) + 16px);
-    display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#0000,#000a)}
-  #shutter{width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:var(--accent);cursor:pointer;padding:0}
-  #shutter:active{transform:scale(.93)}
-  .thumb{width:54px;height:54px;border-radius:12px;border:2px solid #fff;background:#222 center/cover no-repeat;position:relative;cursor:pointer;padding:0}
-  .thumb i{position:absolute;top:-8px;right:-8px;background:var(--accent);color:#000;font-style:normal;font-weight:700;font-size:12px;
-    min-width:22px;height:22px;border-radius:11px;display:grid;place-items:center;padding:0 5px}
-  .thumb i:empty{display:none}
-  .side{width:54px;display:flex;justify-content:center}
-  .camerr{position:absolute;left:20px;right:20px;top:40%;text-align:center;color:#ddd;display:none}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .3s}
+  #flash.on{opacity:.75;transition:none}
+  .glass{background:var(--glass);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
+    border:1px solid rgba(255,255,255,.08)}
+  .top{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 10px) 12px 10px;display:flex;gap:8px;align-items:center;background:#000;z-index:2}
+  .proj{flex:1;min-width:0;display:flex;align-items:center;gap:10px;border-radius:16px;padding:8px 12px 8px 10px;cursor:pointer;text-align:left;border:0}
+  .proj .ic{width:34px;height:34px;border-radius:10px;background:var(--accent);color:#000;display:grid;place-items:center;flex:none}
+  .proj .ic svg{width:19px;height:19px;stroke-width:2.1}
+  .proj .tx{min-width:0;display:flex;flex-direction:column}
+  .proj small{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--accent2);text-transform:uppercase}
+  .proj span{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ibtn{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;cursor:pointer;border:0;flex:none;position:relative}
+  .ibtn.on{background:var(--accent);color:#000}
+  .gpsdot{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:#8e8e93;box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+  .gpsdot.ok{background:var(--ok)} .gpsdot.mid{background:#ffd60a} .gpsdot.bad{background:var(--warn)}
+  .camerr{position:absolute;left:24px;right:24px;top:36%;text-align:center;color:#ddd;display:none;font-size:15px}
   .camerr.on{display:block}
-  .zoom{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 170px);display:none;flex-direction:column;gap:8px}
+  .camerr .btn{margin-top:14px}
+
+  .bottom{position:absolute;left:0;right:0;bottom:0;padding:0 0 calc(env(safe-area-inset-bottom) + 14px);
+    padding-top:8px;background:#000}
+  .zoom{display:none;justify-content:center;gap:6px;padding-bottom:10px}
   .zoom.on{display:flex}
-  /* Sheets */
-  .sheet{position:fixed;inset:0;background:#000a;z-index:20;display:none;align-items:flex-end;justify-content:center;color:var(--ink)}
-  .sheet.on{display:flex}
-  .box{background:var(--bg);width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;
-    padding:16px 14px calc(16px + env(safe-area-inset-bottom));-webkit-user-select:text;user-select:text}
-  .box h3{margin:2px 0 12px;display:flex;align-items:center;justify-content:space-between}
-  .x{border:0;background:#e2e5e8;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer;color:var(--ink)}
-  .card{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:12px}
-  .lbl{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 6px}
-  input[type=text],textarea,select{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+  .zbtn{border:0;min-width:38px;height:38px;border-radius:19px;font-size:12px;font-weight:700;cursor:pointer;padding:0 8px}
+  .zbtn.on{color:var(--accent2);font-size:13px}
+  .detail{display:flex;justify-content:center;padding:0 16px 10px}
+  .detail button{max-width:100%;border:0;border-radius:20px;padding:8px 14px;font-size:14px;display:flex;align-items:center;gap:8px;cursor:pointer}
+  .detail button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .detail svg.i{width:16px;height:16px}
+  .strip{display:flex;gap:4px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 45vw 12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .strip::-webkit-scrollbar{display:none}
+  .strip button{flex:none;scroll-snap-align:center;border:0;background:none;color:rgba(255,255,255,.75);font-size:13px;font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase;padding:6px 10px;cursor:pointer;white-space:nowrap;border-radius:12px}
+  .strip button.on{color:var(--accent2);background:rgba(240,125,0,.14)}
+  .controls{display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0}
+  .side{width:58px;height:58px;display:grid;place-items:center}
+  #shutter{width:80px;height:80px;border-radius:50%;border:0;background:transparent;padding:0;cursor:pointer;position:relative}
+  #shutter:before{content:"";position:absolute;inset:0;border-radius:50%;border:4px solid #fff}
+  #shutter:after{content:"";position:absolute;inset:9px;border-radius:50%;background:linear-gradient(145deg,var(--accent2),var(--accent));transition:transform .12s}
+  #shutter:active:after{transform:scale(.86)}
+  #shutter.busy:after{animation:pulse .6s infinite alternate}
+  @keyframes pulse{to{transform:scale(.8);opacity:.7}}
+  .thumb{width:54px;height:54px;border-radius:14px;border:2px solid rgba(255,255,255,.9);background:#1c1c1e center/cover no-repeat;position:relative;cursor:pointer;padding:0}
+  .thumb i{position:absolute;top:-7px;right:-7px;background:var(--accent);color:#000;font-style:normal;font-weight:800;font-size:12px;
+    min-width:22px;height:22px;border-radius:11px;display:grid;place-items:center;padding:0 6px;box-shadow:0 0 0 2px #000}
+  .thumb i:empty{display:none}
+  .sysCam{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+
+  /* ---------- Bottom Sheets ---------- */
+  .sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;
+    background:rgba(0,0,0,0);pointer-events:none;transition:background .25s}
+  .sheet.on{background:rgba(0,0,0,.55);pointer-events:auto}
+  .box{background:var(--sheet);width:100%;max-width:640px;max-height:90vh;overflow:auto;border-radius:24px 24px 0 0;
+    padding:8px 16px calc(18px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.9,.25,1);
+    -webkit-user-select:text;user-select:text;overscroll-behavior:contain}
+  .sheet.on .box{transform:none}
+  .grab{width:38px;height:5px;border-radius:3px;background:#48484a;margin:0 auto 10px}
+  .hd{display:flex;align-items:center;justify-content:space-between;margin:2px 0 14px}
+  .hd h3{margin:0;font-size:21px;font-weight:700;letter-spacing:-.01em}
+  .x{border:0;background:var(--card2);border-radius:50%;width:32px;height:32px;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+  .x svg.i{width:16px;height:16px;stroke-width:2.4}
+  .sec{font-size:13px;font-weight:600;color:var(--muted);margin:18px 4px 8px;text-transform:uppercase;letter-spacing:.05em}
+  .sec:first-of-type{margin-top:4px}
+  .card{background:var(--card);border-radius:16px;padding:4px 14px;margin-bottom:10px}
+  .card.pad{padding:14px}
+  .lbl{font-size:13px;color:var(--muted);margin:0 0 6px}
+  input[type=text],textarea,select{width:100%;font:inherit;font-size:16px;padding:12px 14px;border:1px solid transparent;border-radius:12px;
+    background:var(--card2);color:var(--txt);outline:none;-webkit-appearance:none;appearance:none}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239a9aa1' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
   textarea{min-height:60px;resize:vertical}
-  .field{margin-bottom:12px} .field:last-child{margin-bottom:0}
-  .row{display:flex;gap:10px} .row>*{flex:1}
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:7px 12px;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
-  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;font:inherit;font-weight:700;cursor:pointer;margin-top:8px;text-align:center}
-  .btn.p{background:var(--accent);color:#000} .btn.s{background:var(--ink);color:#fff}
-  .btn.g{background:#e2e5e8;color:var(--ink)} .btn.d{background:#fbe9e7;color:var(--warn)}
-  .plist .it{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
-  .plist .it:last-child{border-bottom:0}
-  .plist .it .n{flex:1;cursor:pointer} .plist .it b{display:block} .plist .it small{color:var(--muted)}
-  .plist .it.on b{color:var(--accent)}
-  .ico{border:0;background:#eef0f2;border-radius:8px;padding:8px 10px;font-size:15px;cursor:pointer}
-  .tog{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .field{margin:12px 0} .card.pad .field:first-child{margin-top:0} .card.pad .field:last-child{margin-bottom:0}
+  .row{display:flex;gap:10px} .row>*{flex:1;min-width:0}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:14px;padding:15px;font-weight:600;cursor:pointer;margin-top:10px;text-align:center}
+  .btn.p{background:var(--accent);color:#000} .btn.s{background:var(--card2);color:var(--txt)}
+  .btn.d{background:rgba(255,69,58,.14);color:var(--warn)}
+  .btn svg.i{width:19px;height:19px}
+  .list .it{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .list .it:last-child{border-bottom:0}
+  .list .n{flex:1;min-width:0;cursor:pointer}
+  .list .n b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .list .n small{color:var(--muted);font-size:13px}
+  .list .badge{font-size:11px;font-weight:700;color:#000;background:var(--accent);border-radius:6px;padding:2px 6px;margin-right:6px}
+  .list .it.on .n b{color:var(--accent2)}
+  .list .chk{color:var(--accent2);width:22px}
+  .ico{border:0;background:var(--card2);border-radius:10px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+  .ico svg.i{width:17px;height:17px}
+  .tog{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
   .tog:last-child{border-bottom:0}
-  .sw{position:relative;width:46px;height:28px;flex:none}
+  .sw{position:relative;width:51px;height:31px;flex:none}
   .sw input{opacity:0;width:0;height:0}
-  .sw i{position:absolute;inset:0;background:#cfd5da;border-radius:20px;transition:.2s}
-  .sw i:before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
-  .sw input:checked+i{background:var(--ok)} .sw input:checked+i:before{transform:translateX(18px)}
-  .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .sw i{position:absolute;inset:0;background:#39393d;border-radius:20px;transition:.2s}
+  .sw i:before{content:"";position:absolute;width:27px;height:27px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,.3)}
+  .sw input:checked+i{background:var(--ok)} .sw input:checked+i:before{transform:translateX(20px)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:0;background:var(--card2);border-radius:20px;padding:8px 13px;font-size:14px;cursor:pointer}
+  .chip.on{background:var(--accent);color:#000;font-weight:600}
+  .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-radius:14px;overflow:hidden}
   .gal div{position:relative}
-  .gal img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;display:block;cursor:pointer}
-  .gal span{position:absolute;left:4px;bottom:4px;font-size:11px;background:#000a;color:#fff;border-radius:6px;padding:1px 6px}
-  .gal span.open{background:var(--accent);color:#000}
-  .empty{color:var(--muted);text-align:center;padding:20px 0;grid-column:1/-1}
-  .hint{font-size:13px;color:var(--muted);margin-top:6px}
-  .logoPrev{height:54px;max-width:100%;object-fit:contain;background:#9aa3ab;border-radius:8px;padding:6px}
-  #big{width:100%;border-radius:10px;display:block;background:#222}
-  .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 70px);transform:translateX(-50%);background:#000c;color:#fff;
-    padding:10px 16px;border-radius:12px;z-index:50;font-size:14px;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center}
-  .toast.on{opacity:1}
+  .gal img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;cursor:pointer}
+  .gal span{position:absolute;right:5px;bottom:5px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800}
+  .gal span.ok{background:var(--ok);color:#000} .gal span.open{background:var(--accent);color:#000}
+  .empty{color:var(--muted);text-align:center;padding:28px 0;grid-column:1/-1}
+  .hint{font-size:13px;color:var(--muted);margin:8px 4px 0;line-height:1.45}
+  .logoPrev{display:block;height:58px;max-width:100%;object-fit:contain;background:#8e8e93;border-radius:12px;padding:8px;margin:2px 0 4px}
+  #big{width:100%;border-radius:14px;display:block;background:#111}
+  .perm{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .perm:last-child{border-bottom:0}
+  .perm .pi{width:34px;height:34px;border-radius:10px;background:var(--card2);display:grid;place-items:center;flex:none}
+  .perm .pt{flex:1} .perm .pt small{display:block;color:var(--muted);font-size:13px}
+  .st{font-size:12px;font-weight:700;border-radius:8px;padding:4px 8px;white-space:nowrap}
+  .st.ok{background:rgba(48,209,88,.16);color:var(--ok)} .st.no{background:rgba(255,69,58,.16);color:var(--warn)} .st.q{background:var(--card2);color:var(--muted)}
+  ol.steps{margin:0;padding:4px 4px 4px 22px;font-size:15px;line-height:1.5}
+  ol.steps li{margin:6px 0} ol.steps b{color:var(--txt)}
+  .seg{display:flex;background:var(--card2);border-radius:12px;padding:3px;margin-bottom:12px}
+  .seg button{flex:1;border:0;background:none;padding:8px;border-radius:9px;font-weight:600;font-size:14px;color:var(--muted);cursor:pointer}
+  .seg button.on{background:#48484a;color:var(--txt)}
+  .ver{text-align:center;color:#636366;font-size:12px;margin-top:18px}
+  .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 72px);transform:translate(-50%,-8px);z-index:60;
+    padding:10px 16px;border-radius:14px;font-size:14px;font-weight:500;opacity:0;transition:.25s;pointer-events:none;max-width:88%;text-align:center;white-space:pre-line}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-site" viewBox="0 0 24 24"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+</svg>
+
 <div id="stage">
   <video id="video" playsinline muted autoplay></video>
   <canvas id="ovl"></canvas>
   <div id="flash"></div>
   <div class="camerr" id="camErr"></div>
 
-  <div class="topbar">
-    <button class="pill grow" id="btnProj">Baustelle wählen</button>
-    <button class="pill gps" id="gpsBadge">GPS …</button>
-    <button class="pill round" id="btnTorch" hidden title="Licht">🔦</button>
-    <button class="pill round" id="btnSet" title="Einstellungen">⚙️</button>
+  <div class="top">
+    <button class="proj glass" id="btnProj">
+      <div class="ic"><svg class="i"><use href="#i-site"/></svg></div>
+      <div class="tx"><small id="projNr">Baustelle</small><span id="projName">Bitte wählen</span></div>
+    </button>
+    <button class="ibtn glass" id="gpsBtn" title="Standort"><svg class="i"><use href="#i-pin"/></svg><b class="gpsdot" id="gpsDot"></b></button>
+    <button class="ibtn glass" id="btnTorch" hidden title="Licht"><svg class="i"><use href="#i-bolt"/></svg></button>
+    <button class="ibtn glass" id="btnSet" title="Einstellungen"><svg class="i"><use href="#i-gear"/></svg></button>
   </div>
 
-  <div class="zoom" id="zoomBox"></div>
-
-  <div class="detail"><button class="pill" id="btnDetail">＋ Kategorie / Lage / Bemerkung</button></div>
-
-  <div class="bottombar">
-    <div class="side"><button class="thumb" id="btnGal" title="Fotos"><i id="cnt"></i></button></div>
-    <button id="shutter" title="Foto aufnehmen" aria-label="Foto aufnehmen"></button>
-    <div class="side"><label class="pill round" title="System-Kamera (volle Auflösung)">📷<input type="file" id="inCam" accept="image/*" capture="environment" hidden></label></div>
+  <div class="bottom">
+    <div class="zoom" id="zoomBox"></div>
+    <div class="detail"><button class="glass" id="btnDetail"><svg class="i"><use href="#i-edit"/></svg><span id="detailTx">Lage / Bemerkung</span></button></div>
+    <div class="strip" id="katStrip"></div>
+    <div class="controls">
+      <div class="side"><button class="thumb" id="btnGal" title="Fotos"><i id="cnt"></i></button></div>
+      <button id="shutter" aria-label="Foto aufnehmen"></button>
+      <div class="side"><label class="sysCam glass" title="System-Kamera (volle Auflösung)"><svg class="i"><use href="#i-cam"/></svg><input type="file" id="inCam" accept="image/*" capture="environment" hidden></label></div>
+    </div>
   </div>
 </div>
 
 <!-- Baustelle wählen -->
-<div class="sheet" id="shPick"><div class="box">
-  <h3>Welche Baustelle?<button class="x" data-close="shPick">✕</button></h3>
-  <div class="card plist" id="pickList"></div>
-  <button class="btn p" id="pickNew">+ Neue Baustelle</button>
-  <button class="btn g" id="pickNone">Ohne Baustelle fotografieren</button>
+<div class="sheet" id="shPick"><div class="box"><div class="grab"></div>
+  <div class="hd"><h3>Baustelle</h3><button class="x" data-close="shPick"><svg class="i"><use href="#i-x"/></svg></button></div>
+  <div class="card list" id="pickList"></div>
+  <button class="btn p" id="pickNew"><svg class="i"><use href="#i-plus"/></svg>Neue Baustelle</button>
+  <button class="btn s" id="pickNone">Ohne Baustelle fotografieren</button>
 </div></div>
 
 <!-- Baustelle bearbeiten -->
-<div class="sheet" id="shEdit"><div class="box">
-  <h3><span id="editTitle">Neue Baustelle</span><button class="x" data-close="shEdit">✕</button></h3>
-  <div class="card">
+<div class="sheet" id="shEdit"><div class="box"><div class="grab"></div>
+  <div class="hd"><h3 id="editTitle">Neue Baustelle</h3><button class="x" data-close="shEdit"><svg class="i"><use href="#i-x"/></svg></button></div>
+  <div class="card pad">
     <div class="field"><p class="lbl">Projekt- / Kostenstellen-Nr.</p><input type="text" id="eNr" placeholder="z. B. 25-0815"></div>
     <div class="field"><p class="lbl">Bezeichnung</p><input type="text" id="eName" placeholder="z. B. Ulm, Rosengasse – Gehweg"></div>
     <div class="field"><p class="lbl">Auftraggeber (optional)</p><input type="text" id="eAg" placeholder="z. B. Stadt Ulm"></div>
@@ -138,52 +220,64 @@
   <button class="btn d" id="eDel" hidden>Baustelle löschen</button>
 </div></div>
 
-<!-- Details -->
-<div class="sheet" id="shDetail"><div class="box">
-  <h3>Angaben zum Foto<button class="x" data-close="shDetail">✕</button></h3>
-  <div class="card"><p class="lbl">Kategorie</p><div class="chips" id="katChips"></div></div>
-  <div class="card">
+<!-- Lage / Bemerkung -->
+<div class="sheet" id="shDetail"><div class="box"><div class="grab"></div>
+  <div class="hd"><h3>Angaben zum Foto</h3><button class="x" data-close="shDetail"><svg class="i"><use href="#i-x"/></svg></button></div>
+  <div class="card pad">
     <div class="field"><p class="lbl">Lage / Bauteil</p><input type="text" id="inLage" list="lageList" placeholder="z. B. Station 0+120, Gehweg rechts"><datalist id="lageList"></datalist></div>
     <div class="field"><p class="lbl">Bemerkung</p><input type="text" id="inBem" placeholder="z. B. Leitung freigelegt, Tiefe 0,80 m"></div>
   </div>
-  <button class="btn g" id="dClear">Lage &amp; Bemerkung leeren</button>
-  <button class="btn p" data-close="shDetail">Fertig</button>
+  <p class="sec">Schnellauswahl Lage</p>
+  <div class="chips" id="lageChips"></div>
+  <div class="row"><button class="btn s" id="dClear">Leeren</button><button class="btn p" data-close="shDetail">Fertig</button></div>
 </div></div>
 
 <!-- Fotos -->
-<div class="sheet" id="shGal"><div class="box">
-  <h3>Fotos<button class="x" data-close="shGal">✕</button></h3>
-  <button class="btn p" id="btnSaveAll" hidden></button>
-  <div class="card" style="margin-top:10px"><div class="gal" id="gal"></div></div>
+<div class="sheet" id="shGal"><div class="box"><div class="grab"></div>
+  <div class="hd"><h3>Fotos</h3><button class="x" data-close="shGal"><svg class="i"><use href="#i-x"/></svg></button></div>
+  <button class="btn p" id="btnSaveAll" hidden style="margin:0 0 12px"></button>
+  <div class="gal" id="gal"></div>
   <div class="hint" id="galHint"></div>
 </div></div>
 
 <!-- Einzelfoto -->
-<div class="sheet" id="shOne"><div class="box">
-  <h3><span style="font-size:14px;font-weight:600;word-break:break-all" id="oneName"></span><button class="x" data-close="shOne">✕</button></h3>
+<div class="sheet" id="shOne"><div class="box"><div class="grab"></div>
+  <div class="hd"><h3 style="font-size:14px;font-weight:600;word-break:break-all;margin-right:10px" id="oneName"></h3><button class="x" data-close="shOne"><svg class="i"><use href="#i-x"/></svg></button></div>
   <img id="big" alt="">
-  <button class="btn p" id="oneSave">Auf dem Handy speichern</button>
-  <button class="btn d" id="oneDel">Aus der App löschen</button>
+  <button class="btn p" id="oneSave"><svg class="i"><use href="#i-down"/></svg>Auf dem Handy speichern</button>
+  <button class="btn d" id="oneDel"><svg class="i"><use href="#i-trash"/></svg>Aus der App löschen</button>
+</div></div>
+
+<!-- Zugriff dauerhaft erlauben -->
+<div class="sheet" id="shPerm"><div class="box"><div class="grab"></div>
+  <div class="hd"><h3>Zugriff dauerhaft erlauben</h3><button class="x" data-close="shPerm"><svg class="i"><use href="#i-x"/></svg></button></div>
+  <div class="card" id="permStatus"></div>
+  <div class="seg" id="permSeg"><button data-os="android">Android</button><button data-os="ios">iPhone</button></div>
+  <div class="card pad" id="permSteps"></div>
+  <div class="hint" id="permNote"></div>
 </div></div>
 
 <!-- Einstellungen -->
-<div class="sheet" id="shSet"><div class="box">
-  <h3>Einstellungen<button class="x" data-close="shSet">✕</button></h3>
-  <div class="card">
-    <p class="lbl">Speichern</p>
-    <div class="field"><select id="sSave">
+<div class="sheet" id="shSet"><div class="box"><div class="grab"></div>
+  <div class="hd"><h3>Einstellungen</h3><button class="x" data-close="shSet"><svg class="i"><use href="#i-x"/></svg></button></div>
+
+  <button class="btn s" id="btnPerm" style="margin-top:0"><svg class="i"><use href="#i-shield"/></svg>Kamera &amp; Standort dauerhaft erlauben</button>
+
+  <p class="sec">Speichern</p>
+  <div class="card pad">
+    <select id="sSave">
       <option value="auto">Sofort speichern (Android)</option>
       <option value="share">Gesammelt sichern (iPhone)</option>
-    </select></div>
-    <div class="hint" id="saveHint"></div>
-    <div class="tog"><span>Zusätzlich Original ohne Stempel speichern</span><label class="sw"><input type="checkbox" id="sOrig"><i></i></label></div>
+    </select>
+    <div class="hint" id="saveHint" style="margin:8px 2px 0"></div>
   </div>
-  <div class="card">
-    <p class="lbl">Stempel – Inhalt</p>
-    <div id="fieldToggles"></div>
-  </div>
-  <div class="card">
-    <p class="lbl">Stempel – Format</p>
+  <div class="card"><div class="tog"><span>Zusätzlich Original ohne Stempel</span><label class="sw"><input type="checkbox" id="sOrig"><i></i></label></div></div>
+
+  <p class="sec">Stempel – Inhalt</p>
+  <div class="card" id="fieldToggles"></div>
+
+  <p class="sec">Stempel – Format</p>
+  <div class="card pad">
     <div class="field"><p class="lbl">Datum</p><select id="sDate">
       <option value="ymd">2025.10.02 09:34</option><option value="dmy">02.10.2025 09:34</option>
       <option value="dmy2">02.10.25, 09:34</option><option value="dmys">02.10.2025 09:34:12</option></select></div>
@@ -197,37 +291,37 @@
     <div class="field"><p class="lbl">Logo-Hintergrund</p><select id="sLogoBg">
       <option value="glow">Heller Rand (gut auf Asphalt)</option><option value="none">Keiner (wie Vorlage)</option><option value="box">Weißes Feld</option></select></div>
   </div>
-  <div class="card">
-    <p class="lbl">Firma &amp; Fotograf</p>
+
+  <p class="sec">Firma &amp; Fotograf</p>
+  <div class="card pad">
     <div class="field"><input type="text" id="sFirma" placeholder="Firmenname"></div>
     <div class="field"><input type="text" id="sUser" placeholder="Name des Fotografen"></div>
-    <p class="lbl">Logo</p>
-    <img id="sLogoPrev" class="logoPrev" alt="Logo">
-    <div class="row">
-      <label class="btn g">Eigenes Logo<input type="file" id="sLogo" accept="image/*" hidden></label>
-      <button class="btn g" id="sLogoStd">Standard-Logo</button>
-    </div>
-    <div class="hint">Am besten das Original-Logo als PNG mit transparentem Hintergrund hochladen.</div>
+    <div class="field"><p class="lbl">Logo</p><img id="sLogoPrev" class="logoPrev" alt="Logo">
+      <div class="row"><label class="btn s">Eigenes Logo<input type="file" id="sLogo" accept="image/*" hidden></label><button class="btn s" id="sLogoStd">Standard</button></div></div>
   </div>
-  <div class="card">
-    <p class="lbl">Listen</p>
-    <div class="field"><div class="hint">Kategorien (eine pro Zeile)</div><textarea id="sKats" rows="6"></textarea></div>
-    <div class="field"><div class="hint">Vorschläge Lage / Bauteil (eine pro Zeile)</div><textarea id="sLagen" rows="5"></textarea></div>
-    <button class="btn s" id="btnLists">Listen speichern</button>
+  <div class="hint">Am besten das Original-Logo als PNG mit transparentem Hintergrund hochladen.</div>
+
+  <p class="sec">Listen</p>
+  <div class="card pad">
+    <div class="field"><p class="lbl">Kategorien (eine pro Zeile)</p><textarea id="sKats" rows="6"></textarea></div>
+    <div class="field"><p class="lbl">Vorschläge Lage / Bauteil (eine pro Zeile)</p><textarea id="sLagen" rows="5"></textarea></div>
   </div>
+  <button class="btn s" id="btnLists" style="margin-top:0">Listen speichern</button>
+
+  <p class="sec">Allgemein</p>
   <div class="card">
-    <p class="lbl">Baustellen auf andere Handys übertragen</p>
-    <div class="row">
-      <button class="btn g" id="btnExport">Exportieren</button>
-      <label class="btn g">Importieren<input type="file" id="inImport" accept=".json,application/json" hidden></label>
-    </div>
     <div class="tog"><span>Beim Start nach Baustelle fragen</span><label class="sw"><input type="checkbox" id="sAsk"><i></i></label></div>
-    <div class="tog"><span>Adresse online ermitteln (OpenStreetMap)</span><label class="sw"><input type="checkbox" id="sGeo"><i></i></label></div>
+    <div class="tog"><span>Adresse online ermitteln</span><label class="sw"><input type="checkbox" id="sGeo"><i></i></label></div>
   </div>
-  <div class="hint" style="text-align:center">Schwall Foto-Doku · Version 2.0.0</div>
+  <p class="sec">Baustellen auf andere Handys übertragen</p>
+  <div class="row">
+    <button class="btn s" id="btnExport" style="margin-top:0">Exportieren</button>
+    <label class="btn s" style="margin-top:0">Importieren<input type="file" id="inImport" accept=".json,application/json" hidden></label>
+  </div>
+  <div class="ver">Schwall Foto-Doku · Version 2.1.0</div>
 </div></div>
 
-<div class="toast" id="toast"></div>
+<div class="toast glass" id="toast"></div>
 
 <script>
 "use strict";
@@ -239,6 +333,7 @@ const store = {
   set(k,v){ try{ localStorage.setItem("fd2_"+k, JSON.stringify(v)); return true; }catch(e){ toast("Speichern im Browser nicht möglich"); return false; } }
 };
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+const isStandalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
 const FIELDS = [
   ["logo","Logo",true],["datum","Datum & Uhrzeit",true],["coord","Koordinaten",true],["hoehe","Meereshöhe",true],
   ["adresse","Adresse",true],["projekt","Baustelle (Nr. & Bezeichnung)",true],["kat","Kategorie",true],
@@ -273,12 +368,13 @@ const DB = {
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const pad=n=>String(n).padStart(2,"0");
+const ico=n=>`<svg class="i"><use href="#i-${n}"/></svg>`;
 let tt; function toast(m,ms){ const t=$("toast"); t.textContent=m; t.classList.add("on"); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("on"),ms||2400); }
+const buzz=()=>{ try{ navigator.vibrate&&navigator.vibrate(12); }catch(e){} };
 const curProj=()=>P.find(p=>p.id===A.pid)||null;
-const safeName=s=>String(s||"").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/Ä/g,"Ae").replace(/Ö/g,"Oe").replace(/Ü/g,"Ue").replace(/ß/g,"ss")
-  .normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9+\-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,40);
-const ascii=s=>String(s||"").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/Ä/g,"Ae").replace(/Ö/g,"Oe")
-  .replace(/Ü/g,"Ue").replace(/ß/g,"ss").replace(/–/g,"-").normalize("NFD").replace(/[^\x20-\x7e]/g,"");
+const umlaut=s=>String(s||"").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/Ä/g,"Ae").replace(/Ö/g,"Oe").replace(/Ü/g,"Ue").replace(/ß/g,"ss");
+const safeName=s=>umlaut(s).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9+\-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,40);
+const ascii=s=>umlaut(s).replace(/–/g,"-").normalize("NFD").replace(/[^\x20-\x7e]/g,"");
 const openSheet=id=>$(id).classList.add("on"), closeSheet=id=>$(id).classList.remove("on");
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>closeSheet(b.dataset.close)));
 document.querySelectorAll(".sheet").forEach(s=>s.addEventListener("click",e=>{ if(e.target===s) closeSheet(s.id); }));
@@ -301,17 +397,21 @@ function toUTM(lat, lon){
 }
 
 /* ================= GPS & Adresse ================= */
-let G=null, ADDR=null, lastGeo=null, geoBusy=false;
+let G=null, ADDR=null, lastGeo=null, geoBusy=false, gpsDenied=false;
 function startGps(){
-  if(!("geolocation" in navigator)){ badge("Kein GPS","bad"); return; }
+  if(!("geolocation" in navigator)){ gpsState("bad"); return; }
   navigator.geolocation.watchPosition(p=>{
+    gpsDenied=false;
     G={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy, alt:p.coords.altitude};
-    badge("GPS ±"+Math.round(G.acc)+" m", G.acc<=20?"ok":""); lookupAddr(false); drawPreview();
-  }, err=>{ badge(err.code===1?"GPS aus":"Kein GPS","bad"); if(err.code===1) toast("Standort bitte in den Einstellungen des Handys/Browsers erlauben",4000); },
+    gpsState(G.acc<=15?"ok":G.acc<=50?"mid":"bad"); lookupAddr(false); drawPreview();
+  }, err=>{ gpsState("bad"); if(err.code===1){ gpsDenied=true; toast("Standort ist nicht erlaubt – Einstellungen › Zugriff dauerhaft erlauben",4500); } },
   {enableHighAccuracy:true, maximumAge:3000, timeout:30000});
 }
-function badge(t,c){ const b=$("gpsBadge"); b.textContent=t; b.className="pill gps "+(c||""); }
-$("gpsBadge").onclick=()=>toast(G ? (fmtCoord()+"\n"+(addrText()||"Adresse unbekannt")) : "Noch kein GPS-Signal",3500);
+function gpsState(c){ $("gpsDot").className="gpsdot "+(c||""); }
+$("gpsBtn").onclick=()=>{
+  if(gpsDenied){ openPerm(); return; }
+  toast(G ? `GPS ±${Math.round(G.acc)} m\n${fmtCoord()}\n${addrText()||"Adresse unbekannt"}` : "Noch kein GPS-Signal …",4000);
+};
 function dist(a,b){ const R=6371000,r=Math.PI/180,dA=(b.lat-a.lat)*r,dO=(b.lon-a.lon)*r;
   const x=Math.sin(dA/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dO/2)**2; return 2*R*Math.asin(Math.sqrt(x)); }
 async function lookupAddr(force){
@@ -370,7 +470,7 @@ function drawStamp(ctx,W,H,lines,logo){
   const base=Math.min(W,H)*({s:0.028,m:0.034,l:0.042}[S.size]||0.034);
   const mx=base*0.7, my=base*0.8, right=S.pos==="br", maxW=W-2*mx;
   ctx.save();
-  ctx.font=`500 ${Math.round(base)}px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif`;
+  ctx.font=`500 ${Math.round(base)}px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif`;
   ctx.textBaseline="alphabetic"; ctx.textAlign=right?"right":"left";
   const rows=[]; for(const l of lines) rows.push(...wrap(ctx,l,maxW));
   const lh=base*1.24;
@@ -392,55 +492,59 @@ function drawStamp(ctx,W,H,lines,logo){
 
 /* ================= Kamera ================= */
 const video=$("video"), ovl=$("ovl");
-let stream=null, track=null, torchOn=false, camReady=false;
+let stream=null, track=null, torchOn=false, camReady=false, camDenied=false;
 async function startCam(){
   stopCam();
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ camErr("Live-Kamera wird von diesem Browser nicht unterstützt.<br>Bitte das 📷-Symbol unten rechts nutzen."); return; }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ camErr("Live-Kamera wird von diesem Browser nicht unterstützt.<br>Bitte das Kamera-Symbol unten rechts nutzen.", false); return; }
   try{
     stream=await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}, width:{ideal:4032}, height:{ideal:3024}}});
     track=stream.getVideoTracks()[0]; video.srcObject=stream; await video.play().catch(()=>{});
-    camErr(""); setupCaps();
+    camDenied=false; camErr(""); setupCaps();
   }catch(e){
-    camErr(location.protocol!=="https:"&&location.hostname!=="localhost" ? "Die Kamera funktioniert nur, wenn die App über https:// geöffnet wird."
-      : "Kein Kamerazugriff. Bitte Kamera für diese Seite erlauben<br>oder das 📷-Symbol unten rechts nutzen.");
+    if(location.protocol!=="https:"&&location.hostname!=="localhost") camErr("Die Kamera funktioniert nur, wenn die App über https:// geöffnet wird.", false);
+    else { camDenied=true; camErr("Die App darf die Kamera noch nicht benutzen.", true); }
   }
 }
 function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; track=null; camReady=false; } }
-function camErr(m){ $("camErr").innerHTML=m; $("camErr").classList.toggle("on",!!m); }
+function camErr(m, withHelp){
+  const el=$("camErr"); el.classList.toggle("on",!!m);
+  el.innerHTML=m?`${m}${withHelp?`<button class="btn p" id="errHelp">${ico("shield")}So dauerhaft erlauben</button><button class="btn s" id="errRetry">Erneut versuchen</button>`:""}`:"";
+  if(withHelp){ $("errHelp").onclick=openPerm; $("errRetry").onclick=startCam; }
+}
 function setupCaps(){
   const caps=track&&track.getCapabilities?track.getCapabilities():{};
   $("btnTorch").hidden=!caps.torch; torchOn=false; $("btnTorch").classList.remove("on");
   const zb=$("zoomBox"); zb.innerHTML="";
   if(caps.zoom&&caps.zoom.max>1){
     const steps=[1,2,3,5].filter(z=>z>=caps.zoom.min&&z<=caps.zoom.max);
-    steps.forEach(z=>{ const b=document.createElement("button"); b.className="pill round"+(z===1?" on":""); b.textContent=z+"×";
-      b.onclick=()=>{ track.applyConstraints({advanced:[{zoom:z}]}).catch(()=>{}); zb.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); }; zb.appendChild(b); });
+    steps.forEach(z=>{ const b=document.createElement("button"); b.className="zbtn glass"+(z===1?" on":""); b.textContent=z+"×";
+      b.onclick=()=>{ buzz(); track.applyConstraints({advanced:[{zoom:z}]}).catch(()=>{}); zb.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); }; zb.appendChild(b); });
     zb.classList.toggle("on",steps.length>1);
   } else zb.classList.remove("on");
 }
-$("btnTorch").onclick=()=>{ if(!track) return; torchOn=!torchOn; track.applyConstraints({advanced:[{torch:torchOn}]}).catch(()=>{}); $("btnTorch").classList.toggle("on",torchOn); };
+$("btnTorch").onclick=()=>{ if(!track) return; buzz(); torchOn=!torchOn; track.applyConstraints({advanced:[{torch:torchOn}]}).catch(()=>{}); $("btnTorch").classList.toggle("on",torchOn); };
 video.addEventListener("loadedmetadata",()=>{ camReady=true; layoutOvl(); });
 video.addEventListener("resize",layoutOvl);
 window.addEventListener("resize",()=>setTimeout(layoutOvl,200));
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) stopCam(); else startCam(); });
 
 /* Vorschau-Ebene liegt exakt über dem sichtbaren Videobild */
-let vr={x:0,y:0,w:0,h:0};
+/* Bild wie bei der Handy-Kamera zwischen oberer Leiste und Bedienelementen, damit der Stempel nie verdeckt ist */
 function layoutOvl(){
   const vw=video.videoWidth, vh=video.videoHeight, cw=innerWidth, ch=innerHeight;
-  if(!vw||!vh){ return; }
-  const k=Math.min(cw/vw,ch/vh); vr={w:vw*k,h:vh*k,x:(cw-vw*k)/2,y:(ch-vh*k)/2};
-  const dpr=Math.min(devicePixelRatio||1,2);
-  ovl.style.left=vr.x+"px"; ovl.style.top=vr.y+"px"; ovl.style.width=vr.w+"px"; ovl.style.height=vr.h+"px";
-  ovl.width=Math.round(vr.w*dpr); ovl.height=Math.round(vr.h*dpr);
-  // Detail-Knopf über dem Stempel halten, wenn das Bild bis unten reicht
+  if(!vw||!vh) return;
+  let top=document.querySelector(".top").getBoundingClientRect().bottom, bot=document.querySelector(".bottom").getBoundingClientRect().top;
+  if(bot-top<ch*0.45){ top=0; bot=ch; }
+  const k=Math.min(cw/vw,(bot-top)/vh), w=vw*k, h=vh*k, dpr=Math.min(devicePixelRatio||1,2);
+  const L=(cw-w)/2+"px", T=top+((bot-top)-h)/2+"px";
+  for(const el of [video,ovl]){ el.style.left=L; el.style.top=T; el.style.width=w+"px"; el.style.height=h+"px"; el.style.right="auto"; el.style.bottom="auto"; }
+  ovl.width=Math.round(w*dpr); ovl.height=Math.round(h*dpr);
   drawPreview();
 }
 async function drawPreview(){
   if(!ovl.width) return;
-  const ctx=ovl.getContext("2d"); ctx.clearRect(0,0,ovl.width,ovl.height);
-  // Schriftgröße bezieht sich auf das echte Foto – Vorschau proportional
-  drawStamp(ctx,ovl.width,ovl.height,stampLines(new Date()),await getLogo());
+  const logo=await getLogo(), ctx=ovl.getContext("2d"); ctx.clearRect(0,0,ovl.width,ovl.height);
+  drawStamp(ctx,ovl.width,ovl.height,stampLines(new Date()),logo);
 }
 setInterval(drawPreview,15000);
 
@@ -449,13 +553,14 @@ let busy=false;
 $("shutter").onclick=async()=>{
   if(busy) return;
   if(!camReady||!video.videoWidth){ $("inCam").click(); return; }
-  busy=true; const fl=$("flash"); fl.classList.add("on"); setTimeout(()=>fl.classList.remove("on"),60);
+  busy=true; buzz(); $("shutter").classList.add("busy");
+  const fl=$("flash"); fl.classList.add("on"); setTimeout(()=>fl.classList.remove("on"),60);
   try{
     const W=video.videoWidth,H=video.videoHeight, c=document.createElement("canvas"); c.width=W; c.height=H;
     c.getContext("2d").drawImage(video,0,0,W,H);
     await finish(c);
   }catch(e){ console.error(e); toast("Foto konnte nicht erstellt werden"); }
-  busy=false;
+  busy=false; $("shutter").classList.remove("busy");
 };
 $("inCam").onchange=async e=>{
   const f=e.target.files[0]; e.target.value=""; if(!f) return;
@@ -476,11 +581,9 @@ async function finish(c){
   const blob=await addExif(await toBlob(c), meta);
   const item={id:base+"_"+Math.random().toString(36).slice(2,6), name:base+".jpg", blob, saved:false, t:now.getTime()};
   addPhoto(item);
-  if(orig) addPhoto({id:item.id+"_o", name:base+"_original.jpg", blob:orig, saved:false, t:now.getTime()});
-  if(S.save==="auto"){
-    download(item); if(orig) download(PH.find(p=>p.id===item.id+"_o"));
-    toast("Gespeichert ✓");
-  } else toast("Foto aufgenommen – später „Bilder sichern“");
+  let o=null; if(orig){ o={id:item.id+"_o", name:base+"_original.jpg", blob:orig, saved:false, t:now.getTime()}; addPhoto(o); }
+  if(S.save==="auto"){ download(item); if(o) download(o); toast("Gespeichert ✓"); }
+  else toast("Aufgenommen – unten links „Sichern“");
 }
 const toBlob=c=>new Promise(r=>c.toBlob(r,"image/jpeg",0.92));
 function fileBase(now){
@@ -549,23 +652,23 @@ async function saveList(list){
   renderGal();
 }
 function renderGal(){
-  const open=PH.filter(p=>!p.saved);
-  const b=$("btnSaveAll"); b.hidden=!open.length; b.textContent=isIOS?`${open.length} Foto${open.length>1?"s":""} in „Fotos“ sichern`:`${open.length} Foto${open.length>1?"s":""} speichern`;
-  $("gal").innerHTML=PH.length?PH.map((p,i)=>`<div><img src="${p.url}" data-i="${i}" alt=""><span class="${p.saved?"":"open"}">${p.saved?"gesichert":"offen"}</span></div>`).join("")
+  const open=PH.filter(p=>!p.saved), n=open.length;
+  const b=$("btnSaveAll"); b.hidden=!n; b.innerHTML=`${ico("down")}${n} Foto${n>1?"s":""} ${isIOS?"in „Fotos“ sichern":"speichern"}`;
+  $("gal").innerHTML=PH.length?PH.map((p,i)=>`<div><img src="${p.url}" data-i="${i}" alt=""><span class="${p.saved?"ok":"open"}">${p.saved?"✓":"!"}</span></div>`).join("")
     :`<div class="empty">Noch keine Fotos.</div>`;
   $("gal").querySelectorAll("img").forEach(im=>im.onclick=()=>showOne(PH[+im.dataset.i]));
-  $("galHint").textContent=isIOS?"iPhone: Im Menü „Bilder sichern“ wählen – dann liegen die Fotos ganz normal in der Fotos-App. Die App lädt nichts hoch.":
-    "Android: Fotos liegen im Ordner „Download“ und erscheinen in der Galerie. Die App lädt nichts hoch.";
+  $("galHint").textContent=isIOS?"Im Teilen-Menü „Bilder sichern“ wählen – dann liegen die Fotos ganz normal in der Fotos-App. Die App lädt nichts hoch. ✓ = gesichert, ! = noch offen.":
+    "Fotos liegen im Ordner „Download“ und erscheinen in der Galerie. Die App lädt nichts hoch. ✓ = gesichert, ! = noch offen.";
 }
 $("btnSaveAll").onclick=()=>saveList(PH.filter(p=>!p.saved));
 $("btnGal").onclick=()=>{ renderGal(); openSheet("shGal"); };
 let one=null;
 function showOne(p){ one=p; $("big").src=p.url; $("oneName").textContent=p.name; openSheet("shOne"); }
-$("oneSave").onclick=()=>{ if(one) (S.save==="auto"?(download(one),toast("Gespeichert ✓"),renderGal()):saveList([one])); };
+$("oneSave").onclick=()=>{ if(!one) return; if(S.save==="auto"){ download(one); toast("Gespeichert ✓"); renderGal(); } else saveList([one]); };
 $("oneDel").onclick=()=>{
   const b=$("oneDel");
-  if(!one.saved&&!b.dataset.sure){ b.dataset.sure="1"; b.textContent="Noch nicht gesichert – wirklich löschen?"; return; }
-  delete b.dataset.sure; b.textContent="Aus der App löschen";
+  if(!one.saved&&!b.dataset.sure){ b.dataset.sure="1"; b.innerHTML=ico("trash")+"Noch nicht gesichert – wirklich löschen?"; return; }
+  delete b.dataset.sure; b.innerHTML=ico("trash")+"Aus der App löschen";
   DB.del(one.id); URL.revokeObjectURL(one.url); PH=PH.filter(p=>p!==one); one=null; closeSheet("shOne"); renderGal(); updThumb();
 };
 window.addEventListener("beforeunload",e=>{ if(PH.some(p=>!p.saved)){ e.preventDefault(); e.returnValue=""; } });
@@ -573,15 +676,23 @@ window.addEventListener("beforeunload",e=>{ if(PH.some(p=>!p.saved)){ e.preventD
 /* ================= Baustellen ================= */
 function renderTop(){
   const p=curProj();
-  $("btnProj").innerHTML=p?`<b>${esc(p.nr||"Baustelle")}</b> ${esc(p.name)}`:"Baustelle wählen";
-  const d=[A.kat&&A.kat!=="Allgemein"?A.kat:"",A.lage,A.bem].filter(Boolean).join(" · ");
-  $("btnDetail").textContent=d||"＋ Kategorie / Lage / Bemerkung";
-  drawPreview();
+  $("projNr").textContent=p?(p.nr||"Baustelle"):"Baustelle";
+  $("projName").textContent=p?p.name:"Bitte wählen";
+  const d=[A.lage,A.bem].filter(Boolean).join(" · ");
+  $("detailTx").textContent=d||"Lage / Bemerkung";
+  renderStrip(); drawPreview();
+}
+function renderStrip(){
+  if(!S.kats.includes(A.kat)) A.kat=S.kats[0]||"";
+  const st=$("katStrip");
+  st.innerHTML=S.kats.map(k=>`<button class="${k===A.kat?"on":""}" data-k="${esc(k)}">${esc(k)}</button>`).join("");
+  st.querySelectorAll("button").forEach(b=>b.onclick=()=>{ buzz(); A.kat=b.dataset.k; saveA(); renderTop(); });
+  const on=st.querySelector(".on"); if(on) requestAnimationFrame(()=>on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}));
 }
 $("btnProj").onclick=()=>showPicker();
 function showPicker(){
   const L=$("pickList");
-  L.innerHTML=P.length?P.map(p=>`<div class="it${p.id===A.pid?" on":""}"><div class="n" data-id="${p.id}"><b>${esc((p.nr?p.nr+" · ":"")+p.name)}</b><small>${esc([p.ag,p.ort].filter(Boolean).join(" · "))}</small></div><button class="ico" data-e="${p.id}">✏️</button></div>`).join("")
+  L.innerHTML=P.length?P.map(p=>`<div class="it${p.id===A.pid?" on":""}"><div class="chk">${p.id===A.pid?ico("check"):""}</div><div class="n" data-id="${p.id}"><b>${p.nr?`<span class="badge">${esc(p.nr)}</span>`:""}${esc(p.name)}</b><small>${esc([p.ag,p.ort].filter(Boolean).join(" · ")||"–")}</small></div><button class="ico" data-e="${p.id}">${ico("edit")}</button></div>`).join("")
     :`<div class="empty">Noch keine Baustelle angelegt.</div>`;
   L.querySelectorAll(".n").forEach(x=>x.onclick=()=>{ A.pid=x.dataset.id; saveA(); renderTop(); closeSheet("shPick"); });
   L.querySelectorAll("[data-e]").forEach(b=>b.onclick=()=>editProj(b.dataset.e));
@@ -607,18 +718,53 @@ $("eDel").onclick=()=>{
   P=P.filter(x=>x.id!==editId); if(A.pid===editId) A.pid=null; saveP(); saveA(); renderTop(); closeSheet("shEdit"); showPicker();
 };
 
-/* ================= Details ================= */
+/* ================= Lage / Bemerkung ================= */
 $("btnDetail").onclick=()=>{ renderDetail(); openSheet("shDetail"); };
 function renderDetail(){
-  if(!S.kats.includes(A.kat)) A.kat=S.kats[0]||"";
-  $("katChips").innerHTML=S.kats.map(k=>`<button class="chip${k===A.kat?" on":""}" data-k="${esc(k)}">${esc(k)}</button>`).join("");
-  $("katChips").querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ A.kat=c.dataset.k; saveA(); renderDetail(); renderTop(); });
   $("lageList").innerHTML=S.lagen.map(l=>`<option value="${esc(l)}">`).join("");
+  $("lageChips").innerHTML=S.lagen.map(l=>`<button class="chip${l===A.lage?" on":""}" data-l="${esc(l)}">${esc(l)}</button>`).join("");
+  $("lageChips").querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ A.lage=c.dataset.l; saveA(); renderDetail(); renderTop(); });
   $("inLage").value=A.lage; $("inBem").value=A.bem;
 }
 $("inLage").oninput=e=>{ A.lage=e.target.value; saveA(); renderTop(); };
 $("inBem").oninput=e=>{ A.bem=e.target.value; saveA(); renderTop(); };
 $("dClear").onclick=()=>{ A.lage=""; A.bem=""; saveA(); renderDetail(); renderTop(); };
+
+/* ================= Zugriff dauerhaft erlauben ================= */
+let permOS=isIOS?"ios":"android";
+async function permState(name){
+  try{ if(!navigator.permissions) return "?"; return (await navigator.permissions.query({name})).state; }catch(e){ return "?"; }
+}
+async function openPerm(){
+  closeSheet("shSet");
+  const cam=camDenied?"denied":(stream?"granted":await permState("camera"));
+  const geo=gpsDenied?"denied":(G?"granted":await permState("geolocation"));
+  const st=s=>s==="granted"?`<span class="st ok">Erlaubt</span>`:s==="denied"?`<span class="st no">Blockiert</span>`:`<span class="st q">Wird gefragt</span>`;
+  $("permStatus").innerHTML=`<div class="perm"><div class="pi">${ico("cam")}</div><div class="pt">Kamera<small>für den Live-Sucher</small></div>${st(cam)}</div>
+    <div class="perm"><div class="pi">${ico("pin")}</div><div class="pt">Standort<small>für Koordinaten &amp; Adresse</small></div>${st(geo)}</div>`;
+  renderPermSteps(); openSheet("shPerm");
+}
+function renderPermSteps(){
+  $("permSeg").querySelectorAll("button").forEach(b=>{ b.classList.toggle("on",b.dataset.os===permOS); b.onclick=()=>{ permOS=b.dataset.os; renderPermSteps(); }; });
+  const host=location.host||"diese Seite";
+  if(permOS==="android"){
+    $("permSteps").innerHTML=`<p class="lbl">Einmal einrichten, danach fragt Android nicht mehr:</p><ol class="steps">
+      <li>Beim ersten Start bei Kamera und Standort <b>„Bei Nutzung der App zulassen“</b> bzw. <b>„Zulassen“</b> tippen – nicht „Nur dieses Mal“.</li>
+      <li>Handy-<b>Einstellungen › Apps › Chrome › Berechtigungen</b>: Kamera <b>„Bei Nutzung der App zulassen“</b>, Standort ebenso und <b>„Genauen Standort verwenden“</b> an.</li>
+      <li>In <b>Chrome › ⋮ › Einstellungen › Website-Einstellungen</b> unter <b>Kamera</b> und <b>Standort</b> prüfen, dass <b>${esc(host)}</b> bei „Zugelassen“ steht.</li>
+      <li>Falls vorhanden: In den Chrome-Einstellungen unter <b>Datenschutz und Sicherheit</b> das automatische <b>Entfernen von Berechtigungen nicht verwendeter Websites</b> ausschalten.</li>
+      <li>Bei der Download-Frage einmal <b>„Mehrere Downloads zulassen“</b> bestätigen.</li></ol>`;
+    $("permNote").textContent="Danach bleibt der Zugriff dauerhaft erhalten, auch nach einem Neustart des Handys.";
+  } else {
+    $("permSteps").innerHTML=`<p class="lbl">Einmal einrichten, damit das iPhone möglichst selten fragt:</p><ol class="steps">
+      <li><b>Einstellungen › Apps › Safari</b> (ältere iOS: <b>Einstellungen › Safari</b>) › ganz unten <b>Kamera</b> auf <b>„Erlauben“</b> und <b>Standort</b> auf <b>„Erlauben“</b> stellen.</li>
+      <li><b>Einstellungen › Datenschutz &amp; Sicherheit › Ortungsdienste › Safari-Websites</b>: <b>„Beim Verwenden der App“</b> und <b>„Genauer Standort“</b> an.</li>
+      <li>Die App in Safari öffnen, links in der Adressleiste auf <b>„aA“</b> bzw. das Menü-Symbol › <b>Website-Einstellungen</b> › Kamera und Standort auf <b>„Erlauben“</b>.</li>
+      <li>Danach die App über das Symbol auf dem Home-Bildschirm starten.</li></ol>`;
+    $("permNote").textContent="Hinweis: Bei Apps auf dem Home-Bildschirm fragt das iPhone je nach iOS-Version nach dem Neustart der App trotzdem gelegentlich erneut nach der Kamera. Das legt Apple fest und lässt sich von der App nicht abschalten – dann einfach „Erlauben“ tippen.";
+  }
+}
+$("btnPerm").onclick=openPerm;
 
 /* ================= Einstellungen ================= */
 $("btnSet").onclick=()=>{ renderSet(); openSheet("shSet"); };
@@ -626,8 +772,8 @@ function renderSet(){
   $("sSave").value=S.save; $("sOrig").checked=S.orig; $("sDate").value=S.date; $("sCoord").value=S.coord; $("sSize").value=S.size; $("sPos").value=S.pos;
   $("sLogoBg").value=S.logoBg; $("sFirma").value=S.firma; $("sUser").value=S.user; $("sLogoPrev").src=S.logo||STD_LOGO;
   $("sKats").value=S.kats.join("\n"); $("sLagen").value=S.lagen.join("\n"); $("sAsk").checked=S.ask; $("sGeo").checked=S.geo;
-  $("saveHint").textContent=S.save==="auto"?"Jedes Foto wird sofort im Ordner „Download“ gespeichert und erscheint in der Galerie. Beim ersten Mal ggf. „Mehrere Downloads zulassen“ bestätigen.":
-    "Fotos sammeln sich in der App (Zähler am Vorschaubild). Mit „In Fotos sichern“ → „Bilder sichern“ landen alle auf einmal in der Fotos-App.";
+  $("saveHint").textContent=S.save==="auto"?"Jedes Foto wird sofort im Ordner „Download“ gespeichert und erscheint in der Galerie.":
+    "Fotos sammeln sich in der App (Zähler am Vorschaubild). „In Fotos sichern“ › „Bilder sichern“ legt alle auf einmal in die Fotos-App.";
   $("fieldToggles").innerHTML=FIELDS.map(([k,l])=>`<div class="tog"><span>${l}</span><label class="sw"><input type="checkbox" data-f="${k}"${S.fields[k]?" checked":""}><i></i></label></div>`).join("");
   $("fieldToggles").querySelectorAll("input").forEach(i=>i.onchange=()=>{ S.fields[i.dataset.f]=i.checked; saveS(); drawPreview(); });
 }
@@ -645,7 +791,7 @@ $("sLogo").onchange=async e=>{
 };
 $("sLogoStd").onclick=()=>{ S.logo=null; saveS(); renderSet(); drawPreview(); };
 $("btnLists").onclick=()=>{ const ln=t=>t.split("\n").map(s=>s.trim()).filter(Boolean);
-  S.kats=ln($("sKats").value); if(!S.kats.length) S.kats=["Allgemein"]; S.lagen=ln($("sLagen").value); saveS(); toast("Listen gespeichert"); };
+  S.kats=ln($("sKats").value); if(!S.kats.length) S.kats=["Allgemein"]; S.lagen=ln($("sLagen").value); saveS(); renderTop(); toast("Listen gespeichert"); };
 $("btnExport").onclick=async()=>{
   const data=JSON.stringify({app:"fotodoku",v:2,settings:Object.assign({},S,{user:""}),projects:P});
   const f=new File([data],"FotoDoku_Baustellen.json",{type:"application/json"});
